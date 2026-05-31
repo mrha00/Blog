@@ -1,39 +1,35 @@
-## Build
+# Build
+**/bin/
+**/obj/
 [Bb]in/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
 [Dd]ebug/
 [Rr]elease/
-x64/
-x86/
-[Aa][Rr][Mm]/
-[Aa][Rr][Mm]64/
 bld/
 artifacts/
 
-## IDE
+# IDE
+**/.vs/
 .vs/
 .vscode/
 .idea/
 *.user
 *.suo
-*.userosscache
 *.sln.docstates
 
-## Docker local data
+# Database
+**/*.db
+**/*.db-shm
+**/*.db-wal
 data/
 
-## Database (local SQLite)
-*.db
-*.db-shm
-*.db-wal
-
-## Uploads (user-generated)
+# Uploads
 BlogApi.API/wwwroot/uploads/*
 !BlogApi.API/wwwroot/uploads/.gitkeep
 
-## Secrets / local config
+# Secrets / local config
 BlogApi.API/appsettings.Development.json
 .env
 .env.*
@@ -41,21 +37,16 @@ BlogApi.API/appsettings.Development.json
 *.pfx
 secrets.json
 
-## OS
+# OS
 Thumbs.db
-ehthumbs.db
-Desktop.ini
 .DS_Store
 
-## NuGet
+# NuGet / test
 *.nupkg
-project.lock.json
-project.fragment.lock.json
-
-## Test / temp
 TestResults/
 *.tmp
-*.temp
+
+# Internal dev scripts (not for public repo)
 Scripts/run-local-tests.ps1
 Scripts/run-phase6-tests.ps1
 Scripts/run-regression-24.ps1
