@@ -56,3 +56,6 @@ project.fragment.lock.json
 TestResults/
 *.tmp
 *.temp
+Scripts/run-local-tests.ps1
+Scripts/run-phase6-tests.ps1
+Scripts/run-regression-24.ps1
