@@ -22,7 +22,9 @@ public record PostListItem(
     string Summary,
     string CategoryName,
     List<string> Tags,
+    int AuthorId,
     string AuthorName,
+    Enums.PostStatus Status,
     DateTime CreatedAt);
 
 public record PostDetailItem(
@@ -35,6 +37,7 @@ public record PostDetailItem(
     Enums.PostStatus Status,
     string CategoryName,
     List<string> Tags,
+    int AuthorId,
     string AuthorName,
     int ViewCount,
     DateTime CreatedAt,

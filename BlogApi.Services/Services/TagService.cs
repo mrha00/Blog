@@ -1,4 +1,5 @@
 using BlogApi.Core.Entities;
+using BlogApi.Core.Exceptions;
 using BlogApi.Core.Interfaces;
 using BlogApi.Core.Models.Tags;
 
@@ -29,5 +30,18 @@ public class TagService : ITagService
         var tag = new Tag { Name = request.Name };
         tag = await _tagRepository.AddAsync(tag);
         return new TagItem(tag.Id, tag.Name);
+    }
+
+    public async Task DeleteAsync(int id)
+    {
+        var tag = await _tagRepository.GetByIdAsync(id)
+            ?? throw new NotFoundException("标签不存在");
+
+        if (await _tagRepository.IsUsedByPostsAsync(id))
+        {
+            throw new InvalidOperationException("标签已被文章使用，无法删除");
+        }
+
+        await _tagRepository.DeleteAsync(tag);
     }
 }

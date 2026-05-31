@@ -43,6 +43,28 @@ public class PostsController : ControllerBase
             result.PageSize));
     }
 
+    [Authorize]
+    [HttpGet("mine")]
+    public async Task<ActionResult<PagedResult<PostListDto>>> GetMyPosts([FromQuery] PostQueryDto query)
+    {
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var result = await _postService.GetMyPostsAsync(userId, new PostQuery(
+            query.Keyword,
+            query.CategoryId,
+            query.TagId,
+            query.Page,
+            query.PageSize,
+            query.SortBy,
+            query.Descending,
+            userId));
+
+        return Ok(new PagedResult<PostListDto>(
+            result.Items.Select(MapToListDto).ToList(),
+            result.TotalCount,
+            result.Page,
+            result.PageSize));
+    }
+
     [HttpGet("{id:int}")]
     public async Task<ActionResult<PostDetailDto>> GetPost(int id)
     {
@@ -159,7 +181,9 @@ public class PostsController : ControllerBase
             Summary = item.Summary,
             CategoryName = item.CategoryName,
             Tags = item.Tags,
+            AuthorId = item.AuthorId,
             AuthorName = item.AuthorName,
+            Status = item.Status,
             CreatedAt = item.CreatedAt
         };
     }
@@ -177,6 +201,7 @@ public class PostsController : ControllerBase
             Status = item.Status,
             CategoryName = item.CategoryName,
             Tags = item.Tags,
+            AuthorId = item.AuthorId,
             AuthorName = item.AuthorName,
             ViewCount = item.ViewCount,
             CreatedAt = item.CreatedAt,
@@ -191,6 +216,7 @@ public class PostsController : ControllerBase
             Id = item.Id,
             Content = item.Content,
             UserName = item.UserName,
+            UserId = item.UserId,
             CreatedAt = item.CreatedAt,
             ParentId = item.ParentId,
             Replies = item.Replies.Select(MapToCommentDto).ToList()

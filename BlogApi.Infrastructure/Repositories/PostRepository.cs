@@ -39,7 +39,8 @@ public class PostRepository : IPostRepository
                 p.Status,
                 p.Category.Name,
                 p.Tags.Select(t => t.Name).ToList(),
-                p.Author.Username,
+                p.AuthorId,
+                string.IsNullOrEmpty(p.Author.Nickname) ? p.Author.Username : p.Author.Nickname,
                 p.ViewCount,
                 p.CreatedAt,
                 p.PublishedAt))
@@ -48,9 +49,16 @@ public class PostRepository : IPostRepository
 
     public async Task<PagedResult<PostListItem>> GetPostsAsync(PostQuery query)
     {
-        var posts = _db.Posts
-            .AsNoTracking()
-            .Where(p => p.Status == PostStatus.Published);
+        var posts = _db.Posts.AsNoTracking();
+
+        if (query.AuthorId.HasValue)
+        {
+            posts = posts.Where(p => p.AuthorId == query.AuthorId.Value);
+        }
+        else
+        {
+            posts = posts.Where(p => p.Status == PostStatus.Published);
+        }
 
         if (!string.IsNullOrWhiteSpace(query.Keyword))
         {
@@ -82,7 +90,9 @@ public class PostRepository : IPostRepository
                 p.Summary ?? string.Empty,
                 p.Category.Name,
                 p.Tags.Select(t => t.Name).ToList(),
-                p.Author.Username,
+                p.AuthorId,
+                string.IsNullOrEmpty(p.Author.Nickname) ? p.Author.Username : p.Author.Nickname,
+                p.Status,
                 p.CreatedAt))
             .ToListAsync();
 
@@ -134,6 +144,17 @@ public class PostRepository : IPostRepository
 
     public async Task DeleteAsync(Post post)
     {
+        // ParentId FK is Restrict — break the tree, then remove all comments for this post.
+        await _db.Comments
+            .IgnoreQueryFilters()
+            .Where(c => c.PostId == post.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(c => c.ParentId, (int?)null));
+
+        await _db.Comments
+            .IgnoreQueryFilters()
+            .Where(c => c.PostId == post.Id)
+            .ExecuteDeleteAsync();
+
         _db.Posts.Remove(post);
         await _db.SaveChangesAsync();
     }

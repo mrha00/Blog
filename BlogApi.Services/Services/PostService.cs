@@ -13,6 +13,7 @@ public class PostService : IPostService
     private readonly IPostRepository _postRepository;
     private readonly ICategoryRepository _categoryRepository;
     private readonly ITagRepository _tagRepository;
+    private readonly IFileStorageService _fileStorageService;
     private readonly ViewCountService _viewCountService;
     private readonly PostCacheService _postCacheService;
 
@@ -20,18 +21,21 @@ public class PostService : IPostService
         IPostRepository postRepository,
         ICategoryRepository categoryRepository,
         ITagRepository tagRepository,
+        IFileStorageService fileStorageService,
         ViewCountService viewCountService,
         PostCacheService postCacheService)
     {
         _postRepository = postRepository;
         _categoryRepository = categoryRepository;
         _tagRepository = tagRepository;
+        _fileStorageService = fileStorageService;
         _viewCountService = viewCountService;
         _postCacheService = postCacheService;
     }
 
     public async Task<PostDetailItem> CreateAsync(CreatePostRequest request, int userId)
     {
+        CoverUrlValidator.ValidateOrThrow(request.CoverUrl);
         await EnsureCategoryExistsAsync(request.CategoryId);
         var tags = await ResolveTagsAsync(request.TagIds);
 
@@ -62,10 +66,12 @@ public class PostService : IPostService
 
     public async Task<PostDetailItem> UpdateAsync(int id, UpdatePostRequest request, int userId, bool isAdmin)
     {
+        CoverUrlValidator.ValidateOrThrow(request.CoverUrl);
         var post = await _postRepository.GetByIdWithTagsAsync(id)
             ?? throw new NotFoundException("文章不存在");
 
         EnsureAuthorOrAdmin(post.AuthorId, userId, isAdmin);
+        var previousCoverUrl = post.CoverUrl;
         await EnsureCategoryExistsAsync(request.CategoryId);
 
         var tags = await ResolveTagsAsync(request.TagIds);
@@ -92,6 +98,12 @@ public class PostService : IPostService
 
         await _postRepository.UpdateAsync(post);
         await _postCacheService.InvalidateAsync(id);
+
+        if (!string.Equals(previousCoverUrl, request.CoverUrl, StringComparison.Ordinal))
+        {
+            _fileStorageService.TryDeleteUpload(previousCoverUrl);
+        }
+
         return (await _postRepository.GetDetailByIdAsync(id))!;
     }
 
@@ -101,7 +113,9 @@ public class PostService : IPostService
             ?? throw new NotFoundException("文章不存在");
 
         EnsureAuthorOrAdmin(post.AuthorId, userId, isAdmin);
+        var coverUrl = post.CoverUrl;
         await _postRepository.DeleteAsync(post);
+        _fileStorageService.TryDeleteUpload(coverUrl);
         await _postCacheService.InvalidateAsync(id);
     }
 
@@ -188,6 +202,22 @@ public class PostService : IPostService
         var normalized = query with
         {
             PageSize = Math.Clamp(query.PageSize, 1, 100)
+        };
+
+        return await _postRepository.GetPostsAsync(normalized);
+    }
+
+    public async Task<PagedResult<PostListItem>> GetMyPostsAsync(int userId, PostQuery query)
+    {
+        if (query.Page < 1)
+        {
+            throw new ArgumentException("页码从 1 开始");
+        }
+
+        var normalized = query with
+        {
+            PageSize = Math.Clamp(query.PageSize, 1, 100),
+            AuthorId = userId
         };
 
         return await _postRepository.GetPostsAsync(normalized);

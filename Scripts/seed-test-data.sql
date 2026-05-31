@@ -4,10 +4,11 @@
 
 DELETE FROM Users WHERE Username IN ('admin', 'alice', 'bob');
 
-INSERT INTO Users (Username, Email, PasswordHash, Role, CreatedAt)
+INSERT INTO Users (Username, Nickname, Email, PasswordHash, Role, CreatedAt)
 VALUES
 (
     'admin',
+    '博客管理员',
     'admin@blog.local',
     '$2a$11$L.vSYr5k3GDmSXgPc/xcHOl8cgBcovdeGavg29YkX93d5wQukyNHa',
     'Admin',
@@ -15,6 +16,7 @@ VALUES
 ),
 (
     'alice',
+    '爱丽丝',
     'alice@blog.local',
     '$2a$11$L.vSYr5k3GDmSXgPc/xcHOl8cgBcovdeGavg29YkX93d5wQukyNHa',
     'User',
@@ -22,6 +24,7 @@ VALUES
 ),
 (
     'bob',
+    '小明',
     'bob@blog.local',
     '$2a$11$L.vSYr5k3GDmSXgPc/xcHOl8cgBcovdeGavg29YkX93d5wQukyNHa',
     'User',

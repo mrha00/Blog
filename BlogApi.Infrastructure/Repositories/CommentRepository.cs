@@ -24,7 +24,8 @@ public class CommentRepository : ICommentRepository
             .Select(c => new CommentItem(
                 c.Id,
                 c.Content,
-                c.User.Username,
+                string.IsNullOrEmpty(c.User.Nickname) ? c.User.Username : c.User.Nickname,
+                c.UserId,
                 c.CreatedAt,
                 c.ParentId))
             .ToListAsync();
@@ -38,7 +39,8 @@ public class CommentRepository : ICommentRepository
             .Select(c => new CommentItem(
                 c.Id,
                 c.Content,
-                c.User.Username,
+                string.IsNullOrEmpty(c.User.Nickname) ? c.User.Username : c.User.Nickname,
+                c.UserId,
                 c.CreatedAt,
                 c.ParentId))
             .FirstOrDefaultAsync();
@@ -52,7 +54,8 @@ public class CommentRepository : ICommentRepository
             .Select(c => new CommentItem(
                 c.Id,
                 c.Content,
-                c.User.Username,
+                string.IsNullOrEmpty(c.User.Nickname) ? c.User.Username : c.User.Nickname,
+                c.UserId,
                 c.CreatedAt,
                 c.ParentId))
             .FirstOrDefaultAsync();

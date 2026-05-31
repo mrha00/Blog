@@ -41,4 +41,22 @@ public class TagRepository : ITagRepository
     {
         return await _db.Tags.AnyAsync(t => t.Name == name);
     }
+
+    public async Task<Tag?> GetByIdAsync(int id)
+    {
+        return await _db.Tags.FirstOrDefaultAsync(t => t.Id == id);
+    }
+
+    public async Task<bool> IsUsedByPostsAsync(int id)
+    {
+        return await _db.Tags
+            .Where(t => t.Id == id)
+            .AnyAsync(t => t.Posts.Any());
+    }
+
+    public async Task DeleteAsync(Tag tag)
+    {
+        _db.Tags.Remove(tag);
+        await _db.SaveChangesAsync();
+    }
 }

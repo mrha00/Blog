@@ -7,4 +7,5 @@ public record PostQuery(
     int Page = 1,
     int PageSize = 10,
     string? SortBy = "date",
-    bool Descending = true);
+    bool Descending = true,
+    int? AuthorId = null);

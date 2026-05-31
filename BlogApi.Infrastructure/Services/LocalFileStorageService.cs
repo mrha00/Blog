@@ -32,4 +32,34 @@ public class LocalFileStorageService : IFileStorageService
         await content.CopyToAsync(fileStream, ct);
         return $"/uploads/{fileName}";
     }
+
+    public bool TryDeleteUpload(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return false;
+        }
+
+        var trimmed = url.Trim();
+        if (!trimmed.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase)
+            || trimmed.Contains("..", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var fileName = trimmed["/uploads/".Length..];
+        if (string.IsNullOrEmpty(fileName) || fileName.Contains('/') || fileName.Contains('\\'))
+        {
+            return false;
+        }
+
+        var fullPath = Path.Combine(_options.UploadRoot, fileName);
+        if (!File.Exists(fullPath))
+        {
+            return false;
+        }
+
+        File.Delete(fullPath);
+        return true;
+    }
 }

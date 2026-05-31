@@ -166,6 +166,10 @@ namespace BlogApi.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Nickname")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Username")
                         .IsRequired()
                         .HasColumnType("TEXT");

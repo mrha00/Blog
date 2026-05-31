@@ -36,10 +36,15 @@ public class AuthService : IAuthService
             throw new InvalidOperationException("用户名或邮箱已存在");
         }
 
+        var nickname = string.IsNullOrWhiteSpace(request.Nickname)
+            ? request.Username.Trim()
+            : request.Nickname.Trim();
+
         var user = new User
         {
-            Username = request.Username,
-            Email = request.Email,
+            Username = request.Username.Trim(),
+            Nickname = nickname,
+            Email = request.Email.Trim(),
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
             Role = Roles.User,
             CreatedAt = DateTime.UtcNow
@@ -63,7 +68,7 @@ public class AuthService : IAuthService
     private AuthTokenResult CreateTokenResult(User user)
     {
         var token = GenerateToken(user);
-        return new AuthTokenResult(token, user.Id, user.Username, user.Role);
+        return new AuthTokenResult(token, user.Id, user.Username, user.Nickname, user.Role);
     }
 
     private string GenerateToken(User user)
@@ -75,6 +80,7 @@ public class AuthService : IAuthService
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.Username),
+            new Claim("nickname", user.Nickname),
             new Claim(ClaimTypes.Role, user.Role)
         };
 

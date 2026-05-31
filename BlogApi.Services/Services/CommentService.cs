@@ -90,6 +90,7 @@ public class CommentService : ICommentService
             Id = item.Id,
             Content = item.Content,
             UserName = item.UserName,
+            UserId = item.UserId,
             CreatedAt = item.CreatedAt,
             ParentId = item.ParentId,
             Replies = new List<CommentTreeItem>()

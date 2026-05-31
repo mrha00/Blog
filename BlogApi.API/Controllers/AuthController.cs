@@ -22,7 +22,7 @@ public class AuthController : ControllerBase
     public async Task<ActionResult<AuthResponseDto>> Register(RegisterDto dto)
     {
         var result = await _authService.RegisterAsync(
-            new RegisterRequest(dto.Username, dto.Email, dto.Password));
+            new RegisterRequest(dto.Username, dto.Email, dto.Password, dto.Nickname));
 
         return Ok(MapToResponse(result));
     }
@@ -44,6 +44,7 @@ public class AuthController : ControllerBase
         {
             UserId = User.FindFirstValue(ClaimTypes.NameIdentifier),
             Username = User.FindFirstValue(ClaimTypes.Name),
+            Nickname = User.FindFirstValue("nickname"),
             Role = User.FindFirstValue(ClaimTypes.Role)
         });
     }
@@ -54,6 +55,7 @@ public class AuthController : ControllerBase
         {
             Token = result.Token,
             Username = result.Username,
+            Nickname = result.Nickname,
             Role = result.Role
         };
     }

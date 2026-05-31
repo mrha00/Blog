@@ -33,6 +33,14 @@ public class TagsController : ControllerBase
         return CreatedAtAction(nameof(GetTags), new { id = item.Id }, MapToDto(item));
     }
 
+    [Authorize(Roles = Roles.Admin)]
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> DeleteTag(int id)
+    {
+        await _tagService.DeleteAsync(id);
+        return NoContent();
+    }
+
     private static TagDto MapToDto(TagItem item)
     {
         return new TagDto

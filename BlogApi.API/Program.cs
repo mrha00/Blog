@@ -109,6 +109,7 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
+    await BlogDataSeeder.SeedAsync(db);
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();

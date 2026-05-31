@@ -12,4 +12,5 @@ public interface IPostService
     Task<PostDetailItem> RevertToDraftAsync(int id, int userId, bool isAdmin);
     Task<PostDetailItem> GetByIdAsync(int id, int? userId, bool isAdmin, string clientIp);
     Task<PagedResult<PostListItem>> GetPostsAsync(PostQuery query);
+    Task<PagedResult<PostListItem>> GetMyPostsAsync(int userId, PostQuery query);
 }

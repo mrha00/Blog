@@ -63,5 +63,11 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Email)
             .IsUnique();
+
+        modelBuilder.Entity<Post>()
+            .HasIndex(p => p.Status);
+
+        modelBuilder.Entity<Post>()
+            .HasIndex(p => p.CreatedAt);
     }
 }

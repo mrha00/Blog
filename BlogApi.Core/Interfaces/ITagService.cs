@@ -6,4 +6,5 @@ public interface ITagService
 {
     Task<List<TagItem>> GetAllAsync();
     Task<TagItem> CreateAsync(CreateTagRequest request);
+    Task DeleteAsync(int id);
 }

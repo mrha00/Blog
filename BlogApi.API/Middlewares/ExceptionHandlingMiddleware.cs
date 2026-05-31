@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using BlogApi.Core.Exceptions;
+using Microsoft.EntityFrameworkCore;
 
 namespace BlogApi.API.Middlewares;
 
@@ -38,6 +39,7 @@ public class ExceptionHandlingMiddleware
                 (HttpStatusCode.Conflict, invalid.Message),
             InvalidOperationException invalid => (HttpStatusCode.BadRequest, invalid.Message),
             ArgumentException argument => (HttpStatusCode.BadRequest, argument.Message),
+            DbUpdateException => (HttpStatusCode.BadRequest, "数据更新失败，请检查关联数据后重试"),
             _ => (HttpStatusCode.InternalServerError, "服务器内部错误")
         };
 

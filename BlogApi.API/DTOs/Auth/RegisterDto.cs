@@ -15,4 +15,8 @@ public class RegisterDto
     [Required]
     [MinLength(6)]
     public string Password { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(30, MinimumLength = 2)]
+    public string Nickname { get; set; } = string.Empty;
 }

@@ -9,7 +9,9 @@ public class PostListDto
     public string Summary { get; set; } = string.Empty;
     public string CategoryName { get; set; } = string.Empty;
     public List<string> Tags { get; set; } = new();
+    public int AuthorId { get; set; }
     public string AuthorName { get; set; } = string.Empty;
+    public PostStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 
@@ -24,6 +26,7 @@ public class PostDetailDto
     public PostStatus Status { get; set; }
     public string CategoryName { get; set; } = string.Empty;
     public List<string> Tags { get; set; } = new();
+    public int AuthorId { get; set; }
     public string AuthorName { get; set; } = string.Empty;
     public int ViewCount { get; set; }
     public DateTime CreatedAt { get; set; }
