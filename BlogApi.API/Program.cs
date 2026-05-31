@@ -119,17 +119,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
     app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 }
-else if (app.Environment.EnvironmentName == "IntegrationTests")
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
 
 app.UseStaticFiles();
-if (!app.Environment.EnvironmentName.Equals("IntegrationTests", StringComparison.OrdinalIgnoreCase))
-{
-    app.UseHttpsRedirection();
-}
+app.UseHttpsRedirection();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -140,5 +132,3 @@ app.MapHealthChecks("/health", new HealthCheckOptions
 });
 
 app.Run();
-
-public partial class Program;
