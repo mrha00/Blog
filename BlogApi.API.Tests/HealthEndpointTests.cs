@@ -4,11 +4,11 @@ using Xunit;
 
 namespace BlogApi.API.Tests;
 
-public class HealthEndpointTests : IClassFixture<WebApplicationFactory<Program>>
+public class HealthEndpointTests : IClassFixture<BlogApiWebApplicationFactory>
 {
     private readonly HttpClient _client;
 
-    public HealthEndpointTests(WebApplicationFactory<Program> factory)
+    public HealthEndpointTests(BlogApiWebApplicationFactory factory)
     {
         _client = factory.CreateClient();
     }

@@ -14,10 +14,11 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-      - run: dotnet restore BlogApi.API/BlogApi.API.csproj
-      - run: dotnet build BlogApi.API/BlogApi.API.csproj --no-restore -c Release
+      - run: dotnet build BlogApi.API/BlogApi.API.csproj -c Release
       - run: dotnet test BlogApi.API.Tests/BlogApi.API.Tests.csproj -c Release
       - run: dotnet test BlogApi.Services.Tests/BlogApi.Services.Tests.csproj -c Release
+    env:
+      Jwt__Key: BlogApi-CI-Secret-Key-At-Least-32-Chars!!
 
   frontend:
     runs-on: ubuntu-latest

@@ -19,11 +19,11 @@ artifacts/
 *.suo
 *.sln.docstates
 
-# Database
+# Database (repo-root runtime data dir only; do NOT match Infrastructure/Data/)
 **/*.db
 **/*.db-shm
 **/*.db-wal
-data/
+/data/
 
 # Uploads
 BlogApi.API/wwwroot/uploads/*
