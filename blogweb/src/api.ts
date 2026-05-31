@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import { Post, Category, Tag, Comment } from './types';
+import { Post, Category, Tag, Comment, PublicUserProfile } from './types';
 import {
   toWritePayload,
   normalizePost,
@@ -178,6 +178,7 @@ export async function getMe(): Promise<{
   nickname?: string;
   role: string;
   avatarUrl?: string;
+  bio?: string;
   email?: string;
   createdAt?: string;
 }> {
@@ -227,6 +228,7 @@ export async function resolveSessionUser(token: string): Promise<User> {
     username: me.username,
     nickname: me.nickname || me.username,
     avatarUrl: me.avatarUrl,
+    bio: me.bio,
     email: me.email,
     role: me.role,
   };
@@ -259,6 +261,7 @@ export async function getPosts(filters: {
   search?: string;
   categoryId?: number | string;
   tagId?: number | string;
+  authorId?: number | string;
 }): Promise<{
   list: Post[];
   total: number;
@@ -282,6 +285,9 @@ export async function getPosts(filters: {
   if (filters.tagId) {
     params.tagId = Number(filters.tagId);
   }
+  if (filters.authorId) {
+    params.authorId = Number(filters.authorId);
+  }
 
   const res = await api.get('/api/posts', { params });
   return parsePostsResponse(res.data, page);
@@ -290,6 +296,25 @@ export async function getPosts(filters: {
 export async function getPostDetail(id: number | string): Promise<Post> {
   const res = await api.get(`/api/posts/${id}`);
   return normalizePost(res.data);
+}
+
+export async function getUserProfile(userId: number): Promise<PublicUserProfile> {
+  const res = await api.get<PublicUserProfile>(`/api/users/${userId}`);
+  return res.data;
+}
+
+export async function getUserPosts(
+  userId: number,
+  page = 1,
+  pageSize = 10
+): Promise<{
+  list: Post[];
+  total: number;
+  page: number;
+  totalPages: number;
+}> {
+  const res = await api.get(`/api/users/${userId}/posts`, { params: { page, pageSize } });
+  return parsePostsResponse(res.data, page);
 }
 
 export async function createPost(postData: Partial<Post>): Promise<Post> {
@@ -339,6 +364,12 @@ export async function updateCategory(
 
 export async function deleteCategory(id: number): Promise<void> {
   await api.delete(`/api/categories/${id}`);
+}
+
+export async function cleanupTestCategories(): Promise<number> {
+  const res = await api.delete<{ deleted: number }>('/api/categories/cleanup-test');
+  const data = res.data as { deleted?: number };
+  return data?.deleted ?? 0;
 }
 
 export async function getTags(): Promise<Tag[]> {
@@ -435,4 +466,10 @@ export async function updateTag(id: number, name: string): Promise<Tag> {
 
 export async function deleteTag(id: number): Promise<void> {
   await api.delete(`/api/tags/${id}`);
+}
+
+export async function cleanupTestTags(): Promise<number> {
+  const res = await api.delete<{ deleted: number }>('/api/tags/cleanup-test');
+  const data = res.data as { deleted?: number };
+  return data?.deleted ?? 0;
 }

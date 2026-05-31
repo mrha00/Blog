@@ -71,4 +71,9 @@ public class TagService : ITagService
 
         await _tagRepository.DeleteAsync(tag);
     }
+
+    public Task<int> CleanupTestTagsAsync()
+    {
+        return _tagRepository.DeleteTestTagsAsync();
+    }
 }

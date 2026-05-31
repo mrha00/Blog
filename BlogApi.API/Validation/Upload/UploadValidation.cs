@@ -4,7 +4,7 @@ namespace BlogApi.API.Validation.Upload;
 
 public static class UploadValidation
 {
-    private const long MaxBytes = 5 * 1024 * 1024;
+    private const long MaxBytes = UploadLimits.MaxBytes;
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".jpg", ".jpeg", ".png"
@@ -29,7 +29,7 @@ public static class UploadValidation
             errors.Add(new ValidationErrorItem
             {
                 Field = "file",
-                Message = "文件大小不能超过 5MB"
+                Message = $"文件大小不能超过 {UploadLimits.MaxSizeLabel}"
             });
         }
 

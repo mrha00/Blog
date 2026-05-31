@@ -52,6 +52,16 @@ public class CategoriesController : ControllerBase
         return Ok(ApiResponse<object>.Success(null!, "分类已删除"));
     }
 
+    [Authorize(Roles = Roles.Admin)]
+    [HttpDelete("cleanup-test")]
+    public async Task<ActionResult<ApiResponse<object>>> CleanupTestCategories()
+    {
+        var deleted = await _categoryService.CleanupTestCategoriesAsync();
+        return Ok(ApiResponse<object>.Success(
+            new { deleted },
+            deleted > 0 ? $"已清理 {deleted} 个测试分类" : "没有需要清理的测试分类"));
+    }
+
     private static CategoryDto MapToDto(CategoryItem item)
     {
         return new CategoryDto

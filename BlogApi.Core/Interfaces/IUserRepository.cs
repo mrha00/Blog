@@ -10,4 +10,5 @@ public interface IUserRepository
     Task<User> AddAsync(User user);
     Task<User> UpdateAsync(User user);
     Task<bool> ExistsByUsernameOrEmailAsync(string username, string email);
+    Task<int> CountPublishedPostsAsync(int userId);
 }

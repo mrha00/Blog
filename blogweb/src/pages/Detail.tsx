@@ -16,10 +16,12 @@ import {
 import { Post, Comment, Category } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { canUserManagePost } from '../utils/apiHelpers';
+import { canUserManagePost, getPostCategoryName } from '../utils/apiHelpers';
 import { groupCommentsFromFlat } from '../utils/commentHelpers';
-import { formatAuthorMeta } from '../utils/displayName';
+import { getPostAuthorLabel } from '../utils/displayName';
 import CommentThread from '../components/CommentThread';
+import UserLink from '../components/UserLink';
+import ReadingProgress from '../components/ReadingProgress';
 import {
   Calendar,
   Eye,
@@ -30,7 +32,6 @@ import {
   Lock,
   Globe,
   AlertCircle,
-  FolderOpen
 } from 'lucide-react';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 
@@ -199,13 +200,7 @@ export default function Detail() {
   const coverUrl = resolveAssetUrl(post?.coverUrl);
   const isDraftState = isDraftStatus(post?.status);
 
-  // Extract category text
-  const categoryName =
-    post && typeof post.category === 'object' && post.category
-      ? post.category.name
-      : post && typeof post.category === 'string'
-      ? post.category
-      : categories.find((c) => c.id === post?.categoryId)?.name;
+  const categoryName = post ? getPostCategoryName(post, categories) : undefined;
 
   if (loading) {
     return (
@@ -241,7 +236,9 @@ export default function Detail() {
   }
 
   return (
-    <div className="max-w-[800px] mx-auto px-6 py-8 flex-grow w-full">
+    <>
+      <ReadingProgress />
+      <div className="mx-auto w-full max-w-4xl flex-grow px-6 py-8">
       {/* Return home controller */}
       <div className="flex justify-between items-center mb-6">
         <button
@@ -300,44 +297,50 @@ export default function Detail() {
       )}
 
       {/* Title block */}
-      <div id="article-header" className="mb-6">
-        <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded inline-block mb-3.5 uppercase tracking-wider">
-          {categoryName || '未分类'}
-        </span>
-        <h1 className="text-2xl md:text-3.5xl font-extrabold text-gray-900 tracking-tight leading-tight mb-4">
-          {post.title}
-        </h1>
-        
-        {/* Author meta row */}
-        <div className="flex flex-wrap items-center text-xs text-gray-500 gap-y-2 gap-x-4 border-b border-gray-100 pb-5">
-          <span className="text-gray-700">{formatAuthorMeta(post)}</span>
-          <div className="flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5 text-gray-400" />
-            <span>发布日期 {formattedDate}</span>
+      <div id="article-header" className="relative mb-8 overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
+        {coverUrl && (
+          <div className="relative h-48 md:h-64">
+            <img
+              src={coverUrl}
+              alt={post.title}
+              className="h-full w-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-gray-900/70 via-gray-900/20 to-transparent" />
           </div>
-          {(post.views !== undefined || post.readCount !== undefined) && (
+        )}
+        <div className={`relative p-6 md:p-8 ${coverUrl ? '-mt-16' : ''}`}>
+          <span className="mb-3 inline-block rounded-md bg-blue-600 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-white">
+            {categoryName || '未分类'}
+          </span>
+          <h1 className={`font-display text-3xl font-extrabold leading-tight tracking-tight md:text-4xl ${coverUrl ? 'text-white drop-shadow-sm' : 'text-gray-900'}`}>
+            {post.title}
+          </h1>
+          <div className={`mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-5 text-xs ${coverUrl ? 'border-white/20 text-blue-50' : 'border-gray-100 text-gray-500'}`}>
+            <span className={coverUrl ? 'font-medium text-white' : 'text-gray-700'}>
+              作者 ·{' '}
+              <UserLink
+                userId={post.authorId}
+                name={getPostAuthorLabel(post)}
+                className={coverUrl ? 'text-white hover:text-blue-100' : ''}
+              />
+            </span>
             <div className="flex items-center gap-1">
-              <Eye className="w-3.5 h-3.5 text-gray-400" />
-              <span>{post.views !== undefined ? post.views : post.readCount} 次阅读</span>
+              <Calendar className="h-3.5 w-3.5 opacity-70" />
+              <span>{formattedDate}</span>
             </div>
-          )}
+            {(post.views !== undefined || post.readCount !== undefined) && (
+              <div className="flex items-center gap-1">
+                <Eye className="h-3.5 w-3.5 opacity-70" />
+                <span>{post.views !== undefined ? post.views : post.readCount} 次阅读</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Main Cover container */}
-      {coverUrl && (
-        <div className="w-full max-h-[400px] rounded-2xl overflow-hidden mb-8 shadow-sm border border-gray-200">
-          <img
-            src={coverUrl}
-            alt={post.title}
-            className="w-full h-full object-cover max-h-[400px]"
-            referrerPolicy="no-referrer"
-          />
-        </div>
-      )}
-
       {/* Article Markdown body render */}
-      <article className="prose max-w-none bg-white p-6 md:p-8 rounded-2xl border border-gray-250 shadow-sm mb-12">
+      <article className="prose max-w-none rounded-2xl border border-gray-200 bg-white p-6 shadow-sm md:p-10 mb-12">
         <MarkdownRenderer>{post.content || ''}</MarkdownRenderer>
       </article>
 
@@ -357,10 +360,10 @@ export default function Detail() {
       )}
 
       {/* Comments section */}
-      <section id="comments-section" className="border-t border-gray-200 pt-6 mt-8">
-        <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-1.5">
-          <MessageSquare className="w-4 h-4 text-gray-400" />
-          <span>评论 ({flatComments.length})</span>
+      <section id="comments-section" className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <h3 className="mb-4 flex items-center gap-1.5 text-base font-bold text-gray-800">
+          <MessageSquare className="h-4 w-4 text-blue-600" />
+          <span>讨论区 · {flatComments.length} 条评论</span>
         </h3>
 
         <div className="mb-3">
@@ -408,6 +411,7 @@ export default function Detail() {
           onDeleteComment={handleDeleteComment}
         />
       </section>
-    </div>
+      </div>
+    </>
   );
 }

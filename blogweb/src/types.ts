@@ -3,8 +3,19 @@ export interface User {
   username: string;
   nickname?: string;
   avatarUrl?: string;
+  bio?: string;
   email?: string;
   role?: string;
+}
+
+export interface PublicUserProfile {
+  id: number;
+  username: string;
+  nickname: string;
+  avatarUrl?: string;
+  bio?: string;
+  createdAt?: string;
+  publishedPostCount: number;
 }
 
 export interface Category {

@@ -42,7 +42,7 @@ export function normalizePost(raw: Post): Post {
   return {
     ...raw,
     status: normalizePostStatus(raw.status),
-    coverUrl: raw.coverUrl,
+    coverUrl: raw.coverUrl ?? (raw as { coverURL?: string }).coverURL,
     authorName:
       raw.authorName ||
       (typeof raw.author === 'string' ? raw.author : undefined) ||
@@ -56,6 +56,17 @@ export function normalizePost(raw: Post): Post {
     views: viewCount,
     readCount: viewCount,
   };
+}
+
+export function getPostCategoryName(post: Post, categories: Category[] = []): string {
+  if (post.categoryName) return post.categoryName;
+  if (typeof post.category === 'object' && post.category?.name) return post.category.name;
+  if (typeof post.category === 'string' && post.category) return post.category;
+  if (post.categoryId) {
+    const matched = categories.find((c) => c.id === post.categoryId);
+    if (matched?.name) return matched.name;
+  }
+  return '未分类';
 }
 
 export function getPostAuthorName(post: Post): string | undefined {

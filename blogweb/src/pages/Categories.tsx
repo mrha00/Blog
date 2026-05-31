@@ -1,18 +1,43 @@
-import React, { useState, useEffect } from 'react';
-import { getCategories, createCategory, updateCategory, deleteCategory } from '../api';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  getCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  cleanupTestCategories,
+  getApiError,
+} from '../api';
 import { Category } from '../types';
-import { FolderPlus, Trash2, Edit, AlertCircle, RefreshCw, X } from 'lucide-react';
+import {
+  isTestCatalogName,
+  sortBrowseCategories,
+} from '../utils/catalogFilters';
+import { FolderPlus, Trash2, Edit, AlertCircle, RefreshCw, X, Sparkles } from 'lucide-react';
 
 export default function Categories() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorStatus, setErrorStatus] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Form State
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
+
+  const { humanCategories, testCategories } = useMemo(() => {
+    const human: Category[] = [];
+    const test: Category[] = [];
+    for (const cat of categories) {
+      if (isTestCatalogName(cat.name)) {
+        test.push(cat);
+      } else {
+        human.push(cat);
+      }
+    }
+    return { humanCategories: sortBrowseCategories(human), testCategories: test };
+  }, [categories]);
 
   const fetchCats = async () => {
     setLoading(true);
@@ -20,11 +45,8 @@ export default function Categories() {
     try {
       const data = await getCategories();
       setCategories(data);
-    } catch (err: any) {
-      console.error('Fetch categories error:', err);
-      setErrorStatus(
-        err.message || '获取分类失败。请确保 API 已经启动在 http://localhost:6133'
-      );
+    } catch (err: unknown) {
+      setErrorStatus(getApiError(err, '获取分类失败，请确认 API 已启动'));
     } finally {
       setLoading(false);
     }
@@ -43,22 +65,22 @@ export default function Categories() {
 
     setSubmitting(true);
     setErrorStatus(null);
+    setSuccessMessage(null);
     try {
       if (editingId) {
-        // Update operation
         const updated = await updateCategory(editingId, name.trim(), description.trim());
         setCategories(categories.map((c) => (c.id === editingId ? updated : c)));
         setEditingId(null);
+        setSuccessMessage('分类已更新');
       } else {
-        // Create operation
         const created = await createCategory(name.trim(), description.trim());
         setCategories([...categories, created]);
+        setSuccessMessage('分类已创建');
       }
       setName('');
       setDescription('');
-    } catch (err: any) {
-      console.error('Submit category error:', err);
-      setErrorStatus(err.response?.data?.message || err.message || '操作分类失败');
+    } catch (err: unknown) {
+      setErrorStatus(getApiError(err, '操作分类失败'));
     } finally {
       setSubmitting(false);
     }
@@ -77,34 +99,111 @@ export default function Categories() {
     setDescription('');
   };
 
-  const handleDeleteClick = async (id: number) => {
-    if (!window.confirm('您确定要删除此分类吗？若分类下仍有文章，系统将拒绝删除。')) return;
+  const handleDeleteClick = async (category: Category) => {
+    const isTest = isTestCatalogName(category.name);
+    const msg = isTest
+      ? `「${category.name}」是测试残留分类，将自动把其下文章移至「技术分享」后删除，是否继续？`
+      : '确定删除此分类吗？若分类下仍有文章，系统将拒绝删除。';
+    if (!window.confirm(msg)) return;
+
+    setErrorStatus(null);
+    setSuccessMessage(null);
     try {
-      await deleteCategory(id);
-      setCategories(categories.filter((c) => c.id !== id));
-      if (editingId === id) {
+      await deleteCategory(category.id);
+      setCategories(categories.filter((c) => c.id !== category.id));
+      if (editingId === category.id) {
         handleCancelEdit();
       }
-    } catch (err: any) {
-      console.error('Delete category error:', err);
-      setErrorStatus(err.response?.data?.message || err.message || '删除分类失败');
+      setSuccessMessage(isTest ? '测试分类已清理' : '分类已删除');
+    } catch (err: unknown) {
+      setErrorStatus(getApiError(err, '删除分类失败'));
     }
   };
 
+  const handleCleanupTestCategories = async () => {
+    if (testCategories.length === 0) return;
+    if (
+      !window.confirm(
+        `将删除 ${testCategories.length} 个测试分类，其下文章会移至「技术分享」，是否继续？`
+      )
+    ) {
+      return;
+    }
+
+    setCleaning(true);
+    setErrorStatus(null);
+    setSuccessMessage(null);
+    try {
+      const deleted = await cleanupTestCategories();
+      await fetchCats();
+      setSuccessMessage(`已清理 ${deleted} 个测试分类`);
+    } catch (err: unknown) {
+      setErrorStatus(getApiError(err, '清理测试分类失败'));
+    } finally {
+      setCleaning(false);
+    }
+  };
+
+  const renderCategoryRow = (cat: Category, dimmed = false) => (
+    <tr
+      key={cat.id}
+      className={`hover:bg-gray-50/50 transition-colors ${dimmed ? 'opacity-70' : ''}`}
+    >
+      <td className="py-3.5 px-4 font-semibold text-gray-900">{cat.name}</td>
+      <td className="py-3.5 px-4 text-gray-500 text-xs max-w-[160px] truncate">
+        {cat.description || <span className="text-gray-300 italic">（暂无描述）</span>}
+      </td>
+      <td className="py-3.5 px-4 text-right">
+        <div className="flex justify-end gap-2.5">
+          <button
+            type="button"
+            onClick={() => handleEditClick(cat)}
+            className="text-blue-600 hover:text-blue-800 cursor-pointer p-1 rounded hover:bg-blue-50 transition-colors"
+            title="编辑"
+          >
+            <Edit className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => handleDeleteClick(cat)}
+            className="text-red-500 hover:text-red-700 cursor-pointer p-1 rounded hover:bg-red-50 transition-colors"
+            title="删除"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+
   return (
-    <div className="max-w-[800px] mx-auto px-6 py-8 flex-1 w-full">
+    <div className="max-w-[900px] mx-auto px-6 py-8 flex-1 w-full">
       <div className="mb-6 flex justify-between items-center pb-4 border-b border-gray-200">
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-gray-900 font-sans">分类管理</h2>
+          <h2 className="text-xl font-bold tracking-tight text-gray-900">分类管理</h2>
           <p className="text-xs text-gray-500 mt-1">管理系统中的所有文章类目</p>
         </div>
-        <button
-          onClick={fetchCats}
-          className="flex items-center gap-1.5 text-xs text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg font-semibold cursor-pointer transition-colors"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          <span>刷新列表</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {testCategories.length > 0 && (
+            <button
+              type="button"
+              onClick={handleCleanupTestCategories}
+              disabled={cleaning}
+              className="flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-60 cursor-pointer"
+            >
+              <Sparkles className="w-3 h-3" />
+              {cleaning ? '清理中…' : `清理 ${testCategories.length} 个测试分类`}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={fetchCats}
+            className="flex items-center gap-1.5 text-xs text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg font-semibold cursor-pointer transition-colors"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            刷新列表
+          </button>
+        </div>
       </div>
 
       {errorStatus && (
@@ -114,21 +213,26 @@ export default function Categories() {
             <span className="font-semibold block mb-0.5">操作异常</span>
             <span>{errorStatus}</span>
           </div>
-          <button onClick={() => setErrorStatus(null)} className="text-red-400 hover:text-red-600 cursor-pointer">
+          <button type="button" onClick={() => setErrorStatus(null)} className="text-red-400 hover:text-red-600 cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
+      {successMessage && (
+        <div className="mb-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-xs font-medium text-green-800">
+          {successMessage}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
-        {/* Editor Form (Left 2-cols) */}
         <div className="md:col-span-2">
           <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm sticky top-24">
             <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
               <FolderPlus className="w-4 h-4 text-blue-700" />
               <span>{editingId ? `修改类目 (#${editingId})` : '新增文章类目'}</span>
             </h3>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">
@@ -136,7 +240,7 @@ export default function Categories() {
                 </label>
                 <input
                   type="text"
-                  placeholder="如: 网络工程、个人感悟"
+                  placeholder="如：网络工程、个人感悟"
                   maxLength={50}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -183,57 +287,54 @@ export default function Categories() {
           </div>
         </div>
 
-        {/* Categories Table (Right 3-cols) */}
         <div className="md:col-span-3">
           {loading ? (
             <div className="py-12 flex justify-center items-center">
-              <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-200 border-t-blue-700"></div>
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-200 border-t-blue-700" />
             </div>
-          ) : categories.length === 0 ? (
+          ) : humanCategories.length === 0 && testCategories.length === 0 ? (
             <div className="bg-white border border-gray-200 rounded-2xl py-12 px-6 text-center shadow-sm">
               <p className="text-gray-400 text-xs">没有找到分类记录</p>
             </div>
           ) : (
-            <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-              <div className="overflow-x-auto">
-                <table id="categories-admin-table" className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50 border-b border-gray-200 text-gray-400 text-xs font-bold tracking-wider uppercase">
-                      <th className="py-3 px-4">分类名称</th>
-                      <th className="py-3 px-4">类目描述</th>
-                      <th className="py-3 px-4 text-right">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 text-sm">
-                    {categories.map((cat) => (
-                      <tr key={cat.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="py-3.5 px-4 font-semibold text-gray-900">{cat.name}</td>
-                        <td className="py-3.5 px-4 text-gray-500 text-xs max-w-[120px] truncate">
-                          {cat.description || <span className="text-gray-300 italic">（暂无描述）</span>}
-                        </td>
-                        <td className="py-3.5 px-4 text-right">
-                          <div className="flex justify-end gap-2.5">
-                            <button
-                              onClick={() => handleEditClick(cat)}
-                              className="text-blue-600 hover:text-blue-800 cursor-pointer p-1 rounded hover:bg-blue-50 transition-colors"
-                              title="编辑"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteClick(cat.id)}
-                              className="text-red-500 hover:text-red-700 cursor-pointer p-1 rounded hover:bg-red-50 transition-colors"
-                              title="删除"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
+            <div className="space-y-4">
+              <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+                <div className="border-b border-gray-100 px-4 py-2.5 text-xs font-semibold text-gray-500">
+                  正式分类 ({humanCategories.length})
+                </div>
+                <div className="overflow-x-auto">
+                  <table id="categories-admin-table" className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-200 text-gray-400 text-xs font-bold tracking-wider uppercase">
+                        <th className="py-3 px-4">分类名称</th>
+                        <th className="py-3 px-4">类目描述</th>
+                        <th className="py-3 px-4 text-right">操作</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 text-sm">
+                      {humanCategories.map((cat) => renderCategoryRow(cat))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
+
+              {testCategories.length > 0 && (
+                <details className="bg-white border border-amber-200 rounded-2xl overflow-hidden shadow-sm">
+                  <summary className="cursor-pointer px-4 py-2.5 text-xs font-medium text-amber-800 bg-amber-50/80">
+                    测试残留分类 ({testCategories.length}) — 点击展开
+                  </summary>
+                  <p className="px-4 pt-2 text-[11px] text-gray-400">
+                    来自 E2E / 集成测试，删除时会自动把文章移至「技术分享」。
+                  </p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <tbody className="divide-y divide-gray-100 text-sm">
+                        {testCategories.map((cat) => renderCategoryRow(cat, true))}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              )}
             </div>
           )}
         </div>

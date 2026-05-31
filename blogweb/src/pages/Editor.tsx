@@ -16,6 +16,8 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Category, Tag } from '../types';
+import { MAX_COVER_SIZE_BYTES, MAX_COVER_SIZE_LABEL } from '../constants/upload';
+import { filterBrowseCategories, filterBrowseTags } from '../utils/catalogFilters';
 import {
   FileText,
   UploadCloud,
@@ -82,10 +84,11 @@ export default function Editor() {
           getCategories(),
           getTags(),
         ]);
-        setCategories(catsData);
-        setTags(tagsData);
-        if (!postId && catsData.length > 0) {
-          setCategoryId((prev) => (prev === '' ? catsData[0].id : prev));
+        const browseCats = filterBrowseCategories(catsData);
+        setCategories(browseCats);
+        setTags(filterBrowseTags(tagsData));
+        if (!postId && browseCats.length > 0) {
+          setCategoryId((prev) => (prev === '' ? browseCats[0].id : prev));
         }
       } catch (err) {
         console.warn('Could not populate categories or tags lists', err);
@@ -107,8 +110,9 @@ export default function Editor() {
           getCategories(),
           getTags(),
         ]);
-        setCategories(catsData);
-        setTags(tagsData);
+        const browseCats = filterBrowseCategories(catsData);
+        setCategories(browseCats);
+        setTags(filterBrowseTags(tagsData));
         setTitle(post.title || '');
         setSummary(post.summary || '');
         setContent(post.content || '');
@@ -145,6 +149,10 @@ export default function Editor() {
   const handleUploadFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       toast.error('请仅上传图片文件');
+      return;
+    }
+    if (file.size > MAX_COVER_SIZE_BYTES) {
+      toast.error(`封面图片不能超过 ${MAX_COVER_SIZE_LABEL}`);
       return;
     }
     
@@ -234,17 +242,24 @@ export default function Editor() {
         await updatePost(postId, postPayload);
         if (postStatus === 'published') {
           await publishPost(postId);
+          toast.success('文章已发布');
+          navigate('/');
         } else {
           await draftPost(postId);
+          toast.success('草稿已保存');
+          navigate(`/posts/${postId}`);
         }
-        navigate(`/posts/${postId}`);
       } else {
         const created = await createPost(postPayload);
         const nextId = created.id;
         if (postStatus === 'published') {
           await publishPost(nextId);
+          toast.success('文章已发布');
+          navigate('/');
+        } else {
+          toast.success('草稿已保存');
+          navigate(`/posts/${nextId}`);
         }
-        navigate(`/posts/${nextId}`);
       }
     } catch (err: unknown) {
       console.error('Submit post error:', err);
@@ -264,7 +279,7 @@ export default function Editor() {
   }
 
   return (
-    <div className="max-w-[800px] mx-auto px-6 py-8 flex-1 w-full">
+    <div className="form-surface mx-auto w-full max-w-[800px] flex-1 px-6 py-8">
       {/* Return Controls header */}
       <div className="flex justify-between items-center mb-6">
         <button
@@ -283,7 +298,7 @@ export default function Editor() {
         <h2 className="text-xl font-bold tracking-tight text-gray-900 font-sans">
           {isEditMode ? '修改博文' : '撰写新博文'}
         </h2>
-        <p className="text-xs text-gray-500 mt-1">支持标准的 Markdown 排版与图像封面直传</p>
+        <p className="text-xs text-gray-500 mt-1 dark:text-slate-400">支持富文本排版与封面图直传</p>
       </div>
 
       {errorStatus && (
@@ -308,7 +323,7 @@ export default function Editor() {
             maxLength={100}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full bg-white border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl px-4 py-3 text-sm outline-none transition-all text-gray-900 font-semibold"
+            className="select-text w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
             disabled={submitting}
             required
           />
@@ -434,7 +449,7 @@ export default function Editor() {
                   <p className="text-xs text-gray-600 font-semibold mb-1">
                     拖拽文章封面至此区域，或 <span className="text-blue-700 underline">浏览本地文件</span>
                   </p>
-                  <p className="text-[10px] text-gray-400">支持 JPG / JPEG / PNG，最大 5MB</p>
+                  <p className="text-[10px] text-gray-400 dark:text-slate-500">支持 JPG / JPEG / PNG，最大 {MAX_COVER_SIZE_LABEL}</p>
                 </>
               )}
             </div>
@@ -452,7 +467,7 @@ export default function Editor() {
             maxLength={300}
             value={summary}
             onChange={(e) => setSummary(e.target.value)}
-            className="w-full bg-white border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl px-4 py-3 text-sm outline-none transition-all text-gray-700 leading-relaxed font-sans"
+            className="select-text w-full rounded-xl border border-gray-200 bg-white px-4 py-3 font-sans text-sm leading-relaxed text-gray-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
             disabled={submitting}
           />
         </div>
@@ -487,11 +502,11 @@ export default function Editor() {
           </div>
         )}
 
-        {/* Markdown Editor Textarea Body */}
+        {/* Editor body */}
         <div>
           <div className="flex justify-between items-center mb-2">
-            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
-              文章正文 (Markdown 语法) <span className="text-red-500">*</span>
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider dark:text-slate-300">
+              文章正文 <span className="text-red-500">*</span>
             </label>
             <button
               type="button"
@@ -513,13 +528,14 @@ export default function Editor() {
             </div>
           ) : (
             <textarea
-              placeholder="键入您的文章内容，支持 ## 标题, *列表*, **加粗** 以及 `代码等 Markdown 标记..."
+              placeholder="在此撰写文章内容，可使用标题、列表、加粗等常见格式…"
               rows={12}
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="w-full bg-white border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl px-4 py-3 text-sm outline-none transition-all text-gray-800 leading-relaxed font-mono"
+              className="select-text w-full rounded-xl border border-gray-200 bg-white px-4 py-3 font-mono text-sm leading-relaxed text-gray-800 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
               disabled={submitting}
               required
+              spellCheck
             />
           )}
         </div>

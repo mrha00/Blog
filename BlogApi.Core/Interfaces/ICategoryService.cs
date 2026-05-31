@@ -8,4 +8,5 @@ public interface ICategoryService
     Task<CategoryItem> CreateAsync(CreateCategoryRequest request);
     Task<CategoryItem> UpdateAsync(int id, UpdateCategoryRequest request);
     Task DeleteAsync(int id);
+    Task<int> CleanupTestCategoriesAsync();
 }

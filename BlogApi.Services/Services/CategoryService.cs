@@ -1,5 +1,6 @@
 using BlogApi.Core.Entities;
 using BlogApi.Core.Exceptions;
+using BlogApi.Core.Helpers;
 using BlogApi.Core.Interfaces;
 using BlogApi.Core.Models.Categories;
 
@@ -59,11 +60,22 @@ public class CategoryService : ICategoryService
         var category = await _categoryRepository.GetByIdAsync(id)
             ?? throw new NotFoundException("分类不存在");
 
+        if (CatalogTestDataFilter.IsTestName(category.Name))
+        {
+            await _categoryRepository.ReassignPostsAndDeleteAsync(category);
+            return;
+        }
+
         if (await _categoryRepository.HasPostsAsync(id))
         {
             throw new InvalidOperationException("该分类下存在文章，无法删除");
         }
 
         await _categoryRepository.DeleteAsync(category);
+    }
+
+    public Task<int> CleanupTestCategoriesAsync()
+    {
+        return _categoryRepository.DeleteTestCategoriesAsync();
     }
 }

@@ -11,8 +11,8 @@ test.describe('Auth — login / register / logout', () => {
 
   test('shows error on invalid credentials', async ({ page }) => {
     await page.goto('/login');
-    await page.getByPlaceholder('键入用户名').fill('admin');
-    await page.getByPlaceholder('填写您的安全密码').fill('wrong-password');
+    await page.locator('#login-username').fill('admin');
+    await page.locator('#login-password').fill('wrong-password');
     await page.getByRole('button', { name: '确定登录' }).click();
     await expect(page.getByText(/登录失败/)).toBeVisible();
   });

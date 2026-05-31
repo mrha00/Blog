@@ -22,8 +22,9 @@ public record UserProfile(
     string Email,
     string Role,
     string? AvatarUrl,
+    string? Bio,
     DateTime CreatedAt);
 
-public record UpdateProfileRequest(string? Nickname, string? AvatarUrl);
+public record UpdateProfileRequest(string? Nickname, string? AvatarUrl, string? Bio);
 
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);

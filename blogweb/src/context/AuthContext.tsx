@@ -24,6 +24,7 @@ function mapMeToUser(me: Awaited<ReturnType<typeof getMe>>): User {
     username: me.username,
     nickname: me.nickname || me.username,
     avatarUrl: me.avatarUrl,
+    bio: me.bio,
     email: me.email,
     role: me.role,
   };

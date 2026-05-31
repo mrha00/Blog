@@ -1,4 +1,5 @@
 using BlogApi.Core.Entities;
+using BlogApi.Core.Enums;
 using BlogApi.Core.Interfaces;
 using BlogApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -46,5 +47,11 @@ public class UserRepository : IUserRepository
     public async Task<bool> ExistsByUsernameOrEmailAsync(string username, string email)
     {
         return await _db.Users.AnyAsync(u => u.Username == username || u.Email == email);
+    }
+
+    public async Task<int> CountPublishedPostsAsync(int userId)
+    {
+        return await _db.Posts.CountAsync(p =>
+            p.AuthorId == userId && p.Status == PostStatus.Published);
     }
 }

@@ -25,7 +25,8 @@ public record PostListItem(
     int AuthorId,
     string AuthorName,
     Enums.PostStatus Status,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    string? CoverUrl);
 
 public record PostDetailItem(
     int Id,

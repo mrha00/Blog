@@ -11,4 +11,6 @@ public interface ICategoryRepository
     Task DeleteAsync(Category category);
     Task<bool> HasPostsAsync(int categoryId);
     Task<bool> NameExistsAsync(string name, int? excludeId = null);
+    Task ReassignPostsAndDeleteAsync(Category category);
+    Task<int> DeleteTestCategoriesAsync();
 }

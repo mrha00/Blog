@@ -16,6 +16,7 @@ public static class DbSchemaEnsurer
         new("20260601140000_AddUserAvatarUrl", ApplyAvatarUrlAsync),
         new("20260601150000_AddPostSoftDelete", ApplyPostSoftDeleteAsync),
         new("20260601160000_AddRefreshTokens", ApplyRefreshTokensAsync),
+        new("20260601170000_AddUserBio", ApplyUserBioAsync),
     ];
 
     public static async Task EnsureAsync(AppDbContext db)
@@ -74,6 +75,15 @@ public static class DbSchemaEnsurer
         {
             await db.Database.ExecuteSqlRawAsync(
                 "ALTER TABLE Posts ADD COLUMN DeletedAt TEXT NULL;");
+        }
+    }
+
+    private static async Task ApplyUserBioAsync(AppDbContext db)
+    {
+        if (!await ColumnExistsAsync(db, "Users", "Bio"))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE Users ADD COLUMN Bio TEXT NULL;");
         }
     }
 

@@ -1,4 +1,5 @@
 using BlogApi.Core.Entities;
+using BlogApi.Core.Helpers;
 using BlogApi.Core.Interfaces;
 using BlogApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -59,6 +60,25 @@ public class TagRepository : ITagRepository
     {
         _db.Tags.Remove(tag);
         await _db.SaveChangesAsync();
+    }
+
+    public async Task<int> DeleteTestTagsAsync()
+    {
+        var allTags = await _db.Tags.Include(t => t.Posts).ToListAsync();
+        var toRemove = allTags.Where(t => CatalogTestDataFilter.IsTestName(t.Name)).ToList();
+        if (toRemove.Count == 0)
+        {
+            return 0;
+        }
+
+        foreach (var tag in toRemove)
+        {
+            tag.Posts.Clear();
+            _db.Tags.Remove(tag);
+        }
+
+        await _db.SaveChangesAsync();
+        return toRemove.Count;
     }
 
     public async Task<Tag> UpdateAsync(Tag tag)

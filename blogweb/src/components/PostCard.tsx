@@ -1,8 +1,11 @@
-import { Link } from 'react-router-dom';
-import { Calendar, Eye } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { shouldSkipCardNavigation } from '../utils/navigateUnlessSelecting';
+import { Calendar, Eye, ImageOff } from 'lucide-react';
 import { Post } from '../types';
 import { isDraftStatus, resolveAssetUrl } from '../api';
-import { formatAuthorMeta } from '../utils/displayName';
+import { getPostAuthorLabel } from '../utils/displayName';
+import { getCategoryAccent } from '../utils/catalogFilters';
+import UserLink from './UserLink';
 
 export interface PostCardProps {
   post: Post;
@@ -10,6 +13,7 @@ export interface PostCardProps {
 }
 
 export default function PostCard({ post, categoryName }: PostCardProps) {
+  const navigate = useNavigate();
   const dateStr = post.createdAt || '';
   const formattedDate = dateStr
     ? new Date(dateStr).toISOString().split('T')[0]
@@ -18,59 +22,88 @@ export default function PostCard({ post, categoryName }: PostCardProps) {
   const coverUrl = resolveAssetUrl(post.coverUrl);
   const isDraft = isDraftStatus(post.status);
   const viewCount = post.views ?? post.readCount;
+  const label = categoryName || '其它杂谈';
+  const accent = getCategoryAccent(label);
+  const excerpt =
+    post.summary || post.content?.replace(/[#*`>_-]/g, '').slice(0, 120) || '点击阅读全文…';
+  const href = `/posts/${post.id}`;
+  const authorLabel = getPostAuthorLabel(post);
 
   return (
     <article
       id={`article-card-${post.id}`}
-      className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:translate-y-[-2px] hover:shadow-md transition-all duration-300 flex flex-col md:flex-row gap-6 items-start"
+      role="link"
+      tabIndex={0}
+      onClick={(e) => {
+        if (!shouldSkipCardNavigation(e)) navigate(href);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') navigate(href);
+      }}
+      className="group relative flex cursor-pointer gap-3 rounded-xl border border-gray-200 bg-white px-3 py-3 transition duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-md dark:border-slate-700 dark:bg-slate-900 dark:hover:border-blue-800 dark:hover:bg-slate-800/80"
     >
-      <div className="flex-1 flex flex-col justify-between self-stretch">
-        <div>
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <span className="text-xs font-bold text-blue-700 uppercase tracking-widest bg-blue-50 px-2.5 py-1 rounded">
-              {categoryName || '其它杂谈'}
-            </span>
-            {isDraft && (
-              <span className="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                草稿
-              </span>
-            )}
+
+      <div className="relative z-[1] h-16 w-24 shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-gray-50 dark:border-slate-700 dark:bg-slate-800">
+        {coverUrl ? (
+          <img
+            src={coverUrl}
+            alt=""
+            referrerPolicy="no-referrer"
+            className="h-full w-full object-cover transition group-hover:scale-[1.03]"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center">
+            <ImageOff className="h-5 w-5 text-gray-300 dark:text-slate-600" />
           </div>
+        )}
+      </div>
 
-          <h2 className="text-lg md:text-xl font-bold text-gray-900 tracking-tight hover:text-blue-700 transition-colors mb-2">
-            <Link to={`/posts/${post.id}`}>{post.title}</Link>
-          </h2>
-
-          <p className="text-gray-500 font-sans text-sm line-clamp-3 mb-4 leading-relaxed">
-            {post.summary || post.content?.replace(/[#*`>_\-]/g, '').slice(0, 140) || '点击阅读全文...'}
-          </p>
+      <div className="relative min-w-0 flex-1 select-text">
+        <div className="mb-1 flex flex-wrap items-center gap-2">
+          <span
+            className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${accent.bg} ${accent.text}`}
+          >
+            {label}
+          </span>
+          {isDraft && (
+            <span className="rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-400">
+              草稿
+            </span>
+          )}
         </div>
 
-        <div className="flex flex-wrap items-center text-xs text-gray-500 gap-y-2 gap-x-4 border-t border-gray-100 pt-4 mt-auto">
-          <span className="text-gray-600">{formatAuthorMeta(post)}</span>
-          <div className="flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5 text-gray-400" />
-            <span>{formattedDate}</span>
-          </div>
+        <h2 className="truncate text-sm font-bold text-gray-900 group-hover:text-blue-700 dark:text-slate-100 dark:group-hover:text-blue-400">
+          <Link to={href} className="hover:underline" onClick={(e) => e.stopPropagation()}>
+            {post.title}
+          </Link>
+        </h2>
+
+        <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-gray-500 dark:text-slate-400">
+          {excerpt}
+        </p>
+
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-gray-400 dark:text-slate-500">
+          <span className="text-gray-600 dark:text-slate-300">
+            作者 ·{' '}
+            <UserLink
+              userId={post.authorId}
+              name={authorLabel}
+              className="text-[11px] font-normal"
+              stopPropagation
+            />
+          </span>
+          <span className="inline-flex items-center gap-0.5">
+            <Calendar className="h-3 w-3" />
+            {formattedDate}
+          </span>
           {viewCount !== undefined && (
-            <div className="flex items-center gap-1">
-              <Eye className="w-3.5 h-3.5 text-gray-400" />
-              <span>{viewCount} 次阅读</span>
-            </div>
+            <span className="inline-flex items-center gap-0.5">
+              <Eye className="h-3 w-3" />
+              {viewCount}
+            </span>
           )}
         </div>
       </div>
-
-      {coverUrl && (
-        <div className="w-full md:w-40 h-28 rounded-xl overflow-hidden bg-gray-50 border border-gray-150 flex-shrink-0 self-center">
-          <img
-            src={coverUrl}
-            alt={post.title}
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
-        </div>
-      )}
     </article>
   );
 }

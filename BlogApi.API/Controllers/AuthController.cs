@@ -71,7 +71,7 @@ public class AuthController : ControllerBase
         var userId = GetCurrentUserId();
         var profile = await _authService.UpdateProfileAsync(
             userId,
-            new UpdateProfileRequest(dto.Nickname, dto.AvatarUrl));
+            new UpdateProfileRequest(dto.Nickname, dto.AvatarUrl, dto.Bio));
 
         return Ok(ApiResponse<UserProfileDto>.Success(MapToProfileDto(profile), "资料已更新"));
     }
@@ -123,6 +123,7 @@ public class AuthController : ControllerBase
             Email = profile.Email,
             Role = profile.Role,
             AvatarUrl = profile.AvatarUrl,
+            Bio = profile.Bio,
             CreatedAt = profile.CreatedAt
         };
     }

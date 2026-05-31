@@ -9,6 +9,7 @@ public class User
     public string PasswordHash { get; set; } = string.Empty;
     public string Role { get; set; } = Constants.Roles.User;
     public string? AvatarUrl { get; set; }
+    public string? Bio { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<Post> Posts { get; set; } = new List<Post>();

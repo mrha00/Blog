@@ -13,6 +13,7 @@ public class PostListDto
     public string AuthorName { get; set; } = string.Empty;
     public PostStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
+    public string? CoverUrl { get; set; }
 }
 
 public class PostDetailDto

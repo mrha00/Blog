@@ -90,6 +90,7 @@ public class PostListCacheService
             query.Page,
             query.PageSize,
             query.SortBy ?? "date",
-            query.Descending);
+            query.Descending,
+            query.PublishedOnly);
     }
 }

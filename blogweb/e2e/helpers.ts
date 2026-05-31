@@ -108,8 +108,8 @@ export async function addNestedCommentsViaApi(
 
 export async function loginViaUI(page: Page, username: string, password: string) {
   await page.goto('/login');
-  await page.getByPlaceholder('键入用户名').fill(username);
-  await page.getByPlaceholder('填写您的安全密码').fill(password);
+  await page.locator('#login-username').fill(username);
+  await page.locator('#login-password').fill(password);
   await page.getByRole('button', { name: '确定登录' }).click();
   await page.waitForURL('/');
   await page.getByRole('link', { name: '撰写' }).waitFor();

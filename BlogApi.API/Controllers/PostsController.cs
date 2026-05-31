@@ -185,7 +185,8 @@ public class PostsController : ControllerBase
             AuthorId = item.AuthorId,
             AuthorName = item.AuthorName,
             Status = item.Status,
-            CreatedAt = item.CreatedAt
+            CreatedAt = item.CreatedAt,
+            CoverUrl = item.CoverUrl
         };
     }
 

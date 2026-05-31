@@ -8,4 +8,5 @@ public record PostQuery(
     int PageSize = 10,
     string? SortBy = "date",
     bool Descending = true,
-    int? AuthorId = null);
+    int? AuthorId = null,
+    bool PublishedOnly = false);

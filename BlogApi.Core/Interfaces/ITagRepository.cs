@@ -12,4 +12,5 @@ public interface ITagRepository
     Task<bool> IsUsedByPostsAsync(int id);
     Task<Tag> UpdateAsync(Tag tag);
     Task DeleteAsync(Tag tag);
+    Task<int> DeleteTestTagsAsync();
 }

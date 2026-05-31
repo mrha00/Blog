@@ -10,6 +10,10 @@ public class CatalogTestDataFilterTests
     [InlineData("int-tag-abc")]
     [InlineData("TechCat99")]
     [InlineData("UniqueTag")]
+    [InlineData("UniqueTagX")]
+    [InlineData("EFCore29390")]
+    [InlineData("CSharp29390")]
+    [InlineData("e2e-tag-1780209594298")]
     [InlineData("????")]
     public void IsTestName_DetectsTestCatalogNames(string name)
     {
@@ -20,6 +24,9 @@ public class CatalogTestDataFilterTests
     [InlineData("技术分享")]
     [InlineData("React")]
     [InlineData("生活随笔")]
+    [InlineData("EF Core")]
+    [InlineData("C#")]
+    [InlineData("ASP.NET Core")]
     public void IsTestName_AllowsProductionNames(string name)
     {
         Assert.False(CatalogTestDataFilter.IsTestName(name));

@@ -8,4 +8,5 @@ public interface ITagService
     Task<TagItem> CreateAsync(CreateTagRequest request);
     Task<TagItem> UpdateAsync(int id, UpdateTagRequest request);
     Task DeleteAsync(int id);
+    Task<int> CleanupTestTagsAsync();
 }

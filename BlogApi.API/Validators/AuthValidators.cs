@@ -48,6 +48,10 @@ public class UpdateProfileDtoValidator : AbstractValidator<UpdateProfileDto>
             .Must(url => string.IsNullOrWhiteSpace(url) || url.StartsWith("/uploads/", StringComparison.Ordinal))
             .WithMessage("头像地址无效，请通过上传接口获取")
             .When(x => x.AvatarUrl != null);
+
+        RuleFor(x => x.Bio)
+            .MaximumLength(500).WithMessage("个人简介不能超过 500 个字符")
+            .When(x => x.Bio != null);
     }
 }
 

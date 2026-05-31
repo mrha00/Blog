@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 import { getPosts, getMyPosts, getCategories, getTags } from '../api';
 import { Post, Category, Tag } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -9,38 +11,40 @@ import {
   sortBrowseCategories,
   getCategoryAccent,
 } from '../utils/catalogFilters';
-import { Search, Hash, LayoutGrid, FolderOpen, AlertCircle, PlusCircle, RefreshCw, FileText } from 'lucide-react';
+import { Search, Hash, LayoutGrid, FolderOpen, AlertCircle, PlusCircle, FileText } from 'lucide-react';
 import PostCard from '../components/PostCard';
+import HomeHero from '../components/HomeHero';
+import HomeSidebar from '../components/HomeSidebar';
+import HorizontalScrollRow from '../components/HorizontalScrollRow';
+import { getPostCategoryName } from '../utils/apiHelpers';
+
+gsap.registerPlugin(useGSAP);
 
 export default function Home() {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // State elements
   const [posts, setPosts] = useState<Post[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
 
-  // Filtering & Pagination via Query Params
   const searchWord = searchParams.get('q') || '';
   const activeCategory = searchParams.get('category') || '';
   const activeTag = searchParams.get('tag') || '';
   const page = Number(searchParams.get('page')) || 1;
 
   const [searchInput, setSearchInput] = useState(searchWord);
+  const [totalArticles, setTotalArticles] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [errorStatus, setErrorStatus] = useState<string | null>(null);
   const [browseMode, setBrowseMode] = useState<'all' | 'mine'>('all');
+  const postListRef = useRef<HTMLDivElement>(null);
 
-  // Load auxiliary lists (categories & tags)
   useEffect(() => {
     async function loadAuxData() {
       try {
-        const [catsData, tagsData] = await Promise.all([
-          getCategories(),
-          getTags(),
-        ]);
+        const [catsData, tagsData] = await Promise.all([getCategories(), getTags()]);
         setCategories(catsData);
         setTags(tagsData);
       } catch (err) {
@@ -50,7 +54,6 @@ export default function Home() {
     loadAuxData();
   }, []);
 
-  // Fetch articles based on filter states
   useEffect(() => {
     if (browseMode === 'mine' && !user) {
       setBrowseMode('all');
@@ -64,13 +67,12 @@ export default function Home() {
         const fetcher = browseMode === 'mine' ? getMyPosts : getPosts;
         const res = await fetcher({
           page,
-          pageSize: 6,
+          pageSize: 10,
           search: searchWord,
-          ...(browseMode === 'all'
-            ? { categoryId: activeCategory, tagId: activeTag }
-            : {}),
+          ...(browseMode === 'all' ? { categoryId: activeCategory, tagId: activeTag } : {}),
         });
         setPosts(res.list);
+        setTotalArticles(res.total);
         setTotalPages(res.totalPages);
       } catch (err: any) {
         console.error('Fetch post error:', err);
@@ -84,11 +86,10 @@ export default function Home() {
     fetchArticles();
   }, [page, searchWord, activeCategory, activeTag, browseMode, user]);
 
-  // Handle actions
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     searchParams.set('q', searchInput);
-    searchParams.set('page', '1'); // reset to page 1
+    searchParams.set('page', '1');
     setSearchParams(searchParams);
   };
 
@@ -112,11 +113,6 @@ export default function Home() {
     setSearchParams(searchParams);
   };
 
-  const clearAllFilters = () => {
-    setSearchInput('');
-    setSearchParams({});
-  };
-
   const changePage = (newPage: number) => {
     if (newPage < 1 || newPage > totalPages) return;
     searchParams.set('page', String(newPage));
@@ -124,7 +120,6 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Helper selectors
   const hasActiveFilters = !!(searchWord || activeCategory || activeTag);
 
   const browseCategories = useMemo(
@@ -133,286 +128,277 @@ export default function Home() {
   );
   const browseTags = useMemo(() => filterBrowseTags(tags), [tags]);
 
+  useGSAP(
+    () => {
+      if (loading || posts.length === 0) return;
+      const cards = postListRef.current?.querySelectorAll('[data-post-card]');
+      if (!cards?.length) return;
+      gsap.fromTo(
+        cards,
+        { opacity: 0, y: 8 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.38,
+          stagger: 0.05,
+          ease: 'power2.out',
+          clearProps: 'transform',
+        }
+      );
+    },
+    { dependencies: [posts, loading], scope: postListRef }
+  );
+
+  const showHero = browseMode === 'all' && !hasActiveFilters && page === 1;
+
   return (
-    <div className="max-w-[800px] mx-auto px-6 py-8 flex-1 w-full">
-      {/* Search Input Section */}
-      <form onSubmit={handleSearchSubmit} className="mb-8">
-        <div className="flex gap-2 bg-white p-1 rounded-xl border border-gray-200 shadow-sm focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-500 transition-all">
-          <div className="flex items-center pl-3 flex-1">
-            <Search className="w-5 h-5 text-gray-400 mr-2" />
-            <input
-              type="text"
-              placeholder="键入关键字搜索文章..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="w-full text-gray-700 placeholder-gray-400 bg-transparent py-2 px-1 focus:outline-none focus:ring-0 select-none"
-            />
-          </div>
-          <button
-            type="submit"
-            className="bg-blue-700 hover:bg-blue-800 text-white font-medium px-6 py-2 rounded-lg transition-colors cursor-pointer"
-          >
-            搜索
-          </button>
-        </div>
-      </form>
-
-      {user && (
-        <div className="flex gap-2 mb-6">
-          <button
-            type="button"
-            onClick={() => {
-              setBrowseMode('all');
-              searchParams.set('page', '1');
-              setSearchParams(searchParams);
-            }}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
-              browseMode === 'all'
-                ? 'bg-blue-700 text-white shadow-sm'
-                : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-200'
-            }`}
-          >
-            全部文章
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setBrowseMode('mine');
-              searchParams.set('page', '1');
-              setSearchParams(searchParams);
-            }}
-            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
-              browseMode === 'mine'
-                ? 'bg-amber-600 text-white shadow-sm'
-                : 'bg-white text-gray-600 border border-gray-200 hover:border-amber-200'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            我的草稿
-          </button>
-        </div>
+    <div className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">
+      {showHero && (
+        <HomeHero
+          totalArticles={totalArticles}
+          categoryCount={browseCategories.length}
+          tagCount={browseTags.length}
+        />
       )}
 
-      {/* Category filter */}
-      {browseMode === 'all' && browseCategories.length > 0 && (
-        <div className="mb-5 rounded-xl border border-gray-100 bg-gradient-to-b from-gray-50/90 to-white p-3.5 shadow-sm">
-          <div className="flex items-center gap-1.5 mb-2.5 text-sm font-medium text-gray-700">
-            <LayoutGrid className="w-4 h-4 text-gray-400" />
-            <span>文章分类</span>
-          </div>
-          <div className="flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <button
-              onClick={() => selectCategory(null)}
-              className={`shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                activeCategory === ''
-                  ? 'bg-blue-700 text-white shadow-sm'
-                  : 'bg-white text-gray-600 hover:text-blue-700 border border-gray-200 hover:border-blue-200'
-              }`}
-            >
-              全部
-            </button>
-            {browseCategories.map((cat) => {
-              const accent = getCategoryAccent(cat.name);
-              const isActive = activeCategory === String(cat.id);
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => selectCategory(cat.id)}
-                  title={cat.description}
-                  className={`shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
-                    isActive
-                      ? `${accent.bg} ${accent.text} ${accent.border} shadow-sm`
-                      : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:text-gray-900'
-                  }`}
-                >
-                  {cat.name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Tag filter */}
-      {browseMode === 'all' && browseTags.length > 0 && (
-        <div className="mb-6 rounded-xl border border-gray-100 bg-white p-3.5 shadow-sm">
-          <div className="flex items-center justify-between mb-2.5">
-            <div className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
-              <Hash className="w-4 h-4 text-gray-400" />
-              <span>热门标签</span>
-            </div>
-            {activeTag && (
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div>
+          <form onSubmit={handleSearchSubmit} className="mb-6">
+            <div className="mb-6 flex gap-2 rounded-2xl border border-gray-200 bg-white p-1.5 shadow-sm transition focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:focus-within:border-blue-600 dark:focus-within:ring-blue-900/50">
+              <div className="flex flex-1 items-center pl-3">
+                <Search className="mr-2 h-5 w-5 text-gray-400 dark:text-slate-500" />
+                <input
+                  type="text"
+                  placeholder="搜索文章标题、摘要或关键词…"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="w-full bg-transparent py-2.5 text-gray-700 placeholder-gray-400 focus:outline-none dark:text-slate-200 dark:placeholder-slate-500"
+                />
+              </div>
               <button
-                onClick={() => selectTag(null)}
-                className="text-xs text-gray-500 hover:text-red-600 transition-colors cursor-pointer"
+                type="submit"
+                className="cursor-pointer rounded-xl bg-blue-700 px-6 py-2.5 font-medium text-white transition hover:bg-blue-800"
               >
-                清除
+                搜索
               </button>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
-            {browseTags.map((tag) => {
-              const isActive = activeTag === String(tag.id);
-              return (
+            </div>
+          </form>
+
+          {user && (
+            <div className="mb-6 flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setBrowseMode('all');
+                  searchParams.set('page', '1');
+                  setSearchParams(searchParams);
+                }}
+                className={`cursor-pointer rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                  browseMode === 'all'
+                    ? 'bg-blue-700 text-white shadow-sm'
+                    : 'border border-gray-200 bg-white text-gray-600 hover:border-blue-200'
+                }`}
+              >
+                全部文章
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setBrowseMode('mine');
+                  searchParams.set('page', '1');
+                  setSearchParams(searchParams);
+                }}
+                className={`inline-flex cursor-pointer items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                  browseMode === 'mine'
+                    ? 'bg-amber-600 text-white shadow-sm'
+                    : 'border border-gray-200 bg-white text-gray-600 hover:border-amber-200'
+                }`}
+              >
+                <FileText className="h-4 w-4" />
+                我的草稿
+              </button>
+            </div>
+          )}
+
+          {browseMode === 'all' && browseCategories.length > 0 && (
+            <div className="mb-5 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 lg:hidden">
+              <div className="mb-2.5 flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-slate-200">
+                <LayoutGrid className="h-4 w-4 text-gray-400 dark:text-slate-500" />
+                <span>文章分类</span>
+              </div>
+              <HorizontalScrollRow className="px-0.5 md:px-8">
                 <button
-                  key={tag.id}
-                  onClick={() => selectTag(isActive ? null : tag.id)}
-                  className={`px-2.5 py-1 rounded-md text-xs transition-all cursor-pointer ${
-                    isActive
-                      ? 'bg-blue-600 text-white font-medium'
-                      : 'bg-gray-50 text-gray-600 hover:bg-blue-50 hover:text-blue-700 border border-transparent hover:border-blue-100'
+                  onClick={() => selectCategory(null)}
+                  className={`shrink-0 cursor-pointer rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
+                    activeCategory === ''
+                      ? 'bg-blue-700 text-white shadow-sm'
+                      : 'border border-gray-200 bg-gray-50 text-gray-600 hover:border-blue-200'
                   }`}
                 >
-                  {tag.name}
+                  全部
                 </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+                {browseCategories.map((cat) => {
+                  const accent = getCategoryAccent(cat.name);
+                  const isActive = activeCategory === String(cat.id);
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => selectCategory(cat.id)}
+                      title={cat.description}
+                      className={`shrink-0 cursor-pointer rounded-lg border px-3.5 py-1.5 text-xs font-semibold transition ${
+                        isActive
+                          ? `${accent.bg} ${accent.text} ${accent.border} shadow-sm`
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      {cat.name}
+                    </button>
+                  );
+                })}
+              </HorizontalScrollRow>
+            </div>
+          )}
 
-      {/* Clear Filter Display */}
-      {hasActiveFilters && browseMode === 'all' && (
-        <div className="flex justify-between items-center bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-8 text-sm text-blue-800">
-          <div className="flex items-center gap-2">
-            <span>
-              正在应用筛选：
-              {searchWord && <span className="font-semibold">关键词 "{searchWord}"</span>}
-              {activeCategory && (
-                <span className="font-semibold">
-                  {searchWord ? ' + ' : ''}分类 "
-                  {categories.find((c) => String(c.id) === activeCategory)?.name || activeCategory}"
-                </span>
+          {browseMode === 'all' && browseTags.length > 0 && (
+            <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm lg:hidden">
+              <div className="mb-2.5 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
+                  <Hash className="h-4 w-4 text-gray-400" />
+                  <span>热门标签</span>
+                </div>
+                {activeTag && (
+                  <button
+                    onClick={() => selectTag(null)}
+                    className="cursor-pointer text-xs text-gray-500 transition hover:text-red-600"
+                  >
+                    清除
+                  </button>
+                )}
+              </div>
+              <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto">
+                {browseTags.map((tag) => {
+                  const isActive = activeTag === String(tag.id);
+                  return (
+                    <button
+                      key={tag.id}
+                      onClick={() => selectTag(isActive ? null : tag.id)}
+                      className={`cursor-pointer rounded-md px-2.5 py-1 text-xs transition ${
+                        isActive
+                          ? 'bg-blue-600 font-medium text-white'
+                          : 'border border-transparent bg-gray-50 text-gray-600 hover:border-blue-100 hover:bg-blue-50 hover:text-blue-700'
+                      }`}
+                    >
+                      {tag.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {errorStatus && (
+            <div className="mb-8 rounded-2xl border border-red-100 bg-red-50 p-6 text-center shadow-sm">
+              <AlertCircle className="mx-auto mb-3 h-10 w-10 text-red-500" />
+              <h3 className="mb-1 text-base font-semibold text-red-800">接口调用失败</h3>
+              <p className="mx-auto max-w-[500px] text-sm leading-relaxed text-red-600">{errorStatus}</p>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="flex items-center justify-center py-24">
+              <div className="h-8 w-8 animate-spin rounded-full border-3 border-blue-200 border-t-blue-700" />
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="rounded-2xl border border-gray-200 bg-white px-6 py-16 text-center shadow-sm">
+              <FolderOpen className="mx-auto mb-3 h-12 w-12 text-gray-300" />
+              <h3 className="mb-1 text-lg font-bold text-gray-900">
+                {browseMode === 'mine' ? '暂无草稿 / 我的文章' : '暂无匹配文章'}
+              </h3>
+              <p className="mx-auto mb-6 max-w-sm text-sm text-gray-500">
+                {browseMode === 'mine'
+                  ? '你还没有保存任何草稿或文章，去编辑器写一篇吧。'
+                  : '试试清除筛选条件，或发布第一篇文章。'}
+              </p>
+              {user ? (
+                <Link
+                  to="/editor"
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-800"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  发布第一篇文章
+                </Link>
+              ) : (
+                <Link
+                  to="/login"
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-800"
+                >
+                  立即登录撰写
+                </Link>
               )}
-              {activeTag && (
-                <span className="font-semibold">
-                  {(searchWord || activeCategory) ? ' + ' : ''}标签 "
-                  {tags.find((t) => String(t.id) === activeTag)?.name || activeTag}"
-                </span>
-              )}
-            </span>
-          </div>
-          <button
-            onClick={clearAllFilters}
-            className="text-xs text-blue-700 hover:text-blue-900 border border-blue-300 bg-white px-2.5 py-1 rounded-md font-semibold cursor-pointer shadow-sm"
-          >
-            清除所有筛选
-          </button>
-        </div>
-      )}
-
-      {/* Error Info Banner */}
-      {errorStatus && (
-        <div className="bg-red-50 border border-red-100 rounded-xl p-6 mb-8 text-center shadow-sm">
-          <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
-          <h3 className="text-red-800 font-semibold text-base mb-1">接口调用失败</h3>
-          <p className="text-red-600 text-sm max-w-[500px] mx-auto leading-relaxed">
-            {errorStatus}
-          </p>
-          <div className="mt-4 flex justify-center gap-3">
-            <button
-              onClick={() => window.location.reload()}
-              className="flex items-center gap-1.5 bg-red-100 hover:bg-red-200 text-red-800 text-xs font-semibold px-4 py-2 rounded-lg cursor-pointer transition-colors"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>重新载入</span>
-            </button>
-            {user && (
-              <Link
-                to="/editor"
-                className="flex items-center gap-1.5 bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold px-4 py-2 rounded-lg cursor-pointer transition-colors"
-              >
-                <PlusCircle className="w-3.5 h-3.5" />
-                <span>撰写离线文章</span>
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Loading Ring */}
-      {loading ? (
-        <div className="py-24 flex justify-center items-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-3 border-blue-200 border-t-blue-700"></div>
-        </div>
-      ) : posts.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-200 py-16 px-6 text-center shadow-sm">
-          <FolderOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <h3 className="text-gray-900 font-bold text-lg mb-1">
-            {browseMode === 'mine' ? '暂无草稿 / 我的文章' : '暂无文章 / 列表为空'}
-          </h3>
-          <p className="text-gray-500 text-sm max-w-sm mx-auto mb-6">
-            {browseMode === 'mine'
-              ? '你还没有保存任何草稿或文章，去编辑器写一篇吧。'
-              : '没有找到匹配当前筛选条件的内容。你可以尝试清除一些筛选器或添加新文章！'}
-          </p>
-          {user ? (
-            <Link
-              to="/editor"
-              className="inline-flex items-center gap-1.5 bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm cursor-pointer transition-all"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>发布第一篇文章</span>
-            </Link>
+            </div>
           ) : (
-            <Link
-              to="/login"
-              className="inline-flex items-center gap-1.5 bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm cursor-pointer transition-all"
-            >
-              <span>立即登录撰写文章</span>
-            </Link>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <h2 className="font-display text-lg font-bold text-gray-900 dark:text-slate-100">
+                  {browseMode === 'mine' ? '我的文章' : '最新文章'}
+                </h2>
+                <span className="text-xs text-gray-500 dark:text-slate-400">共 {totalArticles} 篇</span>
+              </div>
+              <div ref={postListRef} className="flex flex-col gap-2">
+              {posts.map((post) => (
+                  <div key={post.id} data-post-card>
+                    <PostCard
+                      post={post}
+                      categoryName={getPostCategoryName(post, categories)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!loading && posts.length > 0 && totalPages > 1 && (
+            <div className="mt-12 flex items-center justify-between border-t border-gray-200 pt-6">
+              <button
+                onClick={() => changePage(page - 1)}
+                disabled={page === 1}
+                className={`cursor-pointer rounded-lg border px-4 py-2 text-sm font-semibold transition ${
+                  page === 1
+                    ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
+                    : 'border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:text-blue-700'
+                }`}
+              >
+                上一页
+              </button>
+              <span className="text-sm font-semibold text-gray-600">
+                第 {page} / {totalPages} 页
+              </span>
+              <button
+                onClick={() => changePage(page + 1)}
+                disabled={page === totalPages}
+                className={`cursor-pointer rounded-lg border px-4 py-2 text-sm font-semibold transition ${
+                  page === totalPages
+                    ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
+                    : 'border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:text-blue-700'
+                }`}
+              >
+                下一页
+              </button>
+            </div>
           )}
         </div>
-      ) : (
-        /* Posts Listing */
-        <div className="flex flex-col gap-6">
-          {posts.map((post) => {
-            const categoryName =
-              typeof post.category === 'object' && post.category
-                ? post.category.name
-                : typeof post.category === 'string'
-                ? post.category
-                : categories.find((c) => c.id === post.categoryId)?.name;
 
-            return (
-              <PostCard key={post.id} post={post} categoryName={categoryName} />
-            );
-          })}
-        </div>
-      )}
-
-      {/* Pagination component */}
-      {!loading && posts.length > 0 && totalPages > 1 && (
-        <div id="posts-pagination" className="flex justify-between items-center mt-12 border-t border-gray-200 pt-6">
-          <button
-            onClick={() => changePage(page - 1)}
-            disabled={page === 1}
-            className={`px-4 py-2 text-sm font-semibold rounded-lg border transition-all cursor-pointer ${
-              page === 1
-                ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-700 border-gray-200 shadow-sm'
-            }`}
-          >
-            上一页
-          </button>
-          
-          <span className="text-sm font-semibold text-gray-600">
-            第 {page} 页 / 共 {totalPages} 页
-          </span>
-          
-          <button
-            onClick={() => changePage(page + 1)}
-            disabled={page === totalPages}
-            className={`px-4 py-2 text-sm font-semibold rounded-lg border transition-all cursor-pointer ${
-              page === totalPages
-                ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-700 border-gray-200 shadow-sm'
-            }`}
-          >
-            下一页
-          </button>
-        </div>
-      )}
+        {browseMode === 'all' && (
+          <HomeSidebar
+            categories={browseCategories}
+            tags={browseTags}
+            activeCategory={activeCategory}
+            activeTag={activeTag}
+            onSelectCategory={selectCategory}
+            onSelectTag={selectTag}
+          />
+        )}
+      </div>
     </div>
   );
 }

@@ -154,6 +154,17 @@ public class AuthService : IAuthService
             }
         }
 
+        if (request.Bio is not null)
+        {
+            var bio = request.Bio.Trim();
+            if (bio.Length > 500)
+            {
+                throw new ArgumentException("个人简介不能超过 500 个字符");
+            }
+
+            user.Bio = string.IsNullOrWhiteSpace(bio) ? null : bio;
+        }
+
         user = await _userRepository.UpdateAsync(user);
         return MapToProfile(user);
     }
@@ -220,6 +231,7 @@ public class AuthService : IAuthService
             user.Email,
             user.Role,
             user.AvatarUrl,
+            user.Bio,
             user.CreatedAt);
     }
 

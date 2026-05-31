@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { loginAndResolveUser } from '../api';
-import { Lock, User, AlertCircle, RefreshCcw } from 'lucide-react';
+import { Lock, User, AlertCircle, RefreshCcw, BookOpen, Sparkles } from 'lucide-react';
 
 export default function Login() {
   const { login } = useAuth();
@@ -26,91 +26,110 @@ export default function Login() {
       login(token, user, refreshToken);
       navigate('/');
     } catch (err: any) {
-      console.error('Login error:', err);
-      // Give details about the connection
-      const errMsg =
-        err.response?.data?.error ||
-        err.response?.data?.message ||
-        err.message;
-      setErrorStatus(
-        `登录失败: ${errMsg}. 请确认后端服务在 6133 端口已正常启动，且用户凭证正确。`
-      );
+      const errMsg = err.response?.data?.error || err.response?.data?.message || err.message;
+      setErrorStatus(`登录失败: ${errMsg}`);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-[800px] mx-auto px-6 py-16 flex justify-center items-center flex-1 w-full">
-      <div className="bg-white border border-gray-200 rounded-2xl p-8 max-w-md w-full shadow-sm hover:shadow-md transition-shadow duration-300">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900 mb-2">欢迎回来</h2>
-          <p className="text-gray-500 text-sm">请输入您的用户名或邮箱进行登录</p>
+    <div className="mx-auto flex w-full max-w-5xl flex-1 items-center px-6 py-12">
+      <div className="grid w-full overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-xl md:grid-cols-2">
+        <div className="relative hidden flex-col justify-between bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 p-10 text-white md:flex">
+          <div>
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold">
+              <BookOpen className="h-4 w-4" />
+              BlogWeb
+            </div>
+            <h2 className="font-display text-3xl font-bold leading-tight">欢迎回来</h2>
+            <p className="mt-3 text-sm leading-relaxed text-blue-100">
+              登录后继续写作、管理草稿、参与评论，或与管理员一起维护分类标签。
+            </p>
+          </div>
+          <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <Sparkles className="h-4 w-4" />
+              演示账号
+            </div>
+            <p className="mt-2 text-xs text-blue-100">admin / alice / bob · 密码 123456</p>
+          </div>
         </div>
 
-        {errorStatus && (
-          <div className="bg-red-50 border border-red-200 text-red-800 rounded-lg p-3 text-xs flex gap-2 mb-6 items-start leading-relaxed">
-            <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-            <span>{errorStatus}</span>
+        <div className="p-8 md:p-10">
+          <div className="mb-8 text-center md:text-left">
+            <h2 className="font-display text-2xl font-bold text-gray-900">账号登录</h2>
+            <p className="mt-1 text-sm text-gray-500">输入用户名与密码进入 BlogWeb</p>
           </div>
-        )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
-              用户名 / 邮箱
-            </label>
-            <div className="relative flex items-center bg-gray-50 border border-gray-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 rounded-xl px-3 transition-all">
-              <User className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
-              <input
-                type="text"
-                placeholder="键入用户名"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full text-sm py-3 text-gray-800 bg-transparent focus:outline-none"
-                disabled={loading}
-              />
+          {errorStatus && (
+            <div className="mb-6 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs leading-relaxed text-red-800">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+              <span>{errorStatus}</span>
             </div>
-          </div>
+          )}
 
-          <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
-              密码
-            </label>
-            <div className="relative flex items-center bg-gray-50 border border-gray-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 rounded-xl px-3 transition-all">
-              <Lock className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
-              <input
-                type="password"
-                placeholder="填写您的安全密码"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full text-sm py-3 text-gray-800 bg-transparent focus:outline-none"
-                disabled={loading}
-              />
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-700">
+                用户名
+              </label>
+              <div className="flex items-center rounded-xl border border-gray-200 bg-gray-50 px-3 transition focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100">
+                <User className="mr-2 h-4 w-4 shrink-0 text-gray-400" />
+                <input
+                  id="login-username"
+                  type="text"
+                  placeholder="请输入用户名"
+                  autoComplete="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full bg-transparent py-3 text-sm text-gray-800 focus:outline-none"
+                  disabled={loading}
+                />
+              </div>
             </div>
+
+            <div>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-700">
+                密码
+              </label>
+              <div className="flex items-center rounded-xl border border-gray-200 bg-gray-50 px-3 transition focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100">
+                <Lock className="mr-2 h-4 w-4 shrink-0 text-gray-400" />
+                <input
+                  id="login-password"
+                  type="password"
+                  placeholder="请输入密码"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-transparent py-3 text-sm text-gray-800 focus:outline-none"
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex w-full cursor-pointer items-center justify-center rounded-xl bg-blue-700 py-3 font-semibold text-white shadow-sm transition hover:bg-blue-800"
+            >
+              {loading ? (
+                <span className="flex items-center gap-1.5">
+                  <RefreshCcw className="h-4 w-4 animate-spin" />
+                  正在验证…
+                </span>
+              ) : (
+                '确定登录'
+              )}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center text-xs text-gray-500">
+            还没有账号？
+            <Link to="/register" className="ml-1 font-semibold text-blue-700 hover:underline">
+              立即注册
+            </Link>
           </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full flex justify-center items-center bg-blue-700 hover:bg-blue-800 text-white font-semibold py-3 px-4 rounded-xl transition-colors shadow-sm cursor-pointer"
-          >
-            {loading ? (
-              <span className="flex items-center gap-1.5">
-                <RefreshCcw className="w-4 h-4 animate-spin" />
-                <span>正在验证登录...</span>
-              </span>
-            ) : (
-              <span>确定登录</span>
-            )}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center text-xs text-gray-500">
-          <span>还没有账号吗？</span>
-          <Link to="/register" className="text-blue-700 hover:underline ml-1 font-semibold">
-            立即免费注册
-          </Link>
         </div>
       </div>
     </div>

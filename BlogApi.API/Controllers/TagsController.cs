@@ -50,6 +50,16 @@ public class TagsController : ControllerBase
         return Ok(ApiResponse<object>.Success(null!, "标签已删除"));
     }
 
+    [Authorize(Roles = Roles.Admin)]
+    [HttpDelete("cleanup-test")]
+    public async Task<ActionResult<ApiResponse<object>>> CleanupTestTags()
+    {
+        var deleted = await _tagService.CleanupTestTagsAsync();
+        return Ok(ApiResponse<object>.Success(
+            new { deleted },
+            deleted > 0 ? $"已清理 {deleted} 个测试标签" : "没有需要清理的测试标签"));
+    }
+
     private static TagDto MapToDto(TagItem item)
     {
         return new TagDto

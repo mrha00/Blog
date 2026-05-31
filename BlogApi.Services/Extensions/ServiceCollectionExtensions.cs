@@ -18,6 +18,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<ITagService, TagService>();
         services.AddScoped<ICommentService, CommentService>();
+        services.AddScoped<IUserService, UserService>();
         services.AddScoped<IUploadService, UploadService>();
         services.AddScoped<ViewCountService>();
         services.AddScoped<PostCacheService>();

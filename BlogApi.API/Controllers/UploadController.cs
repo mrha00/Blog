@@ -19,7 +19,7 @@ public class UploadController : ControllerBase
     }
 
     [Authorize]
-    [RequestSizeLimit(5 * 1024 * 1024)]
+    [RequestSizeLimit(UploadLimits.MaxBytes)]
     [HttpPost]
     public async Task<ActionResult<ApiResponse<UploadResponseDto>>> Upload(IFormFile file, CancellationToken ct)
     {

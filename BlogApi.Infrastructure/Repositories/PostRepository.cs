@@ -54,6 +54,10 @@ public class PostRepository : IPostRepository
         if (query.AuthorId.HasValue)
         {
             posts = posts.Where(p => p.AuthorId == query.AuthorId.Value);
+            if (query.PublishedOnly)
+            {
+                posts = posts.Where(p => p.Status == PostStatus.Published);
+            }
         }
         else
         {
@@ -93,7 +97,8 @@ public class PostRepository : IPostRepository
                 p.AuthorId,
                 string.IsNullOrEmpty(p.Author.Nickname) ? p.Author.Username : p.Author.Nickname,
                 p.Status,
-                p.CreatedAt))
+                p.CreatedAt,
+                p.CoverUrl))
             .ToListAsync();
 
         return new PagedResult<PostListItem>(items, totalCount, query.Page, pageSize);

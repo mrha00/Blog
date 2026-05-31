@@ -5,7 +5,7 @@ namespace BlogApi.Core.Helpers;
 public static partial class CatalogTestDataFilter
 {
     [GeneratedRegex(
-        @"^(e2e|int)[-_]|^TechCat\d*$|^UniqueTag|^int-cat-|^int-tag-|^e2e-tag-|^e2e-cat-",
+        @"^(e2e|int)[-_]|^TechCat\d*|^UniqueTag|^int-cat-|^int-tag-|^e2e-tag-|^e2e-cat-|^(EFCore|CSharp)\d+$|^\d{10,}$|\d{12,}",
         RegexOptions.IgnoreCase)]
     private static partial Regex TestCatalogPattern();
 
