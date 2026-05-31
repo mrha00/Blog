@@ -1,0 +1,54 @@
+## Build
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+artifacts/
+
+## IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Database (local SQLite)
+*.db
+*.db-shm
+*.db-wal
+
+## Uploads (user-generated)
+BlogApi.API/wwwroot/uploads/*
+!BlogApi.API/wwwroot/uploads/.gitkeep
+
+## Secrets / local config
+BlogApi.API/appsettings.Development.json
+.env
+.env.*
+*.pfx
+secrets.json
+
+## OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+## NuGet
+*.nupkg
+project.lock.json
+project.fragment.lock.json
+
+## Test / temp
+TestResults/
+*.tmp
+*.temp
