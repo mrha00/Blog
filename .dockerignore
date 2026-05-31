@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.git/
+**/*.db
+**/*.db-shm
+**/*.db-wal
+data/
+BlogApi.API/wwwroot/uploads/*
+!BlogApi.API/wwwroot/uploads/.gitkeep
+.env

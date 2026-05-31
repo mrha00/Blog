@@ -1,0 +1,27 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: Data Source=/data/blog.db
+      ConnectionStrings__Redis: redis:6379
+      Jwt__Key: ${JWT_KEY:-BlogApi-Docker-Dev-Secret-Key-32Chars!!}
+      Jwt__Issuer: BlogApi
+      Jwt__Audience: BlogApi
+      Jwt__ExpireMinutes: 60
+    volumes:
+      - ./data:/data
+      - uploads_data:/app/wwwroot/uploads
+    depends_on:
+      redis:
+        condition: service_started
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  uploads_data:

@@ -21,6 +21,9 @@ artifacts/
 *.userosscache
 *.sln.docstates
 
+## Docker local data
+data/
+
 ## Database (local SQLite)
 *.db
 *.db-shm
@@ -34,6 +37,7 @@ BlogApi.API/wwwroot/uploads/*
 BlogApi.API/appsettings.Development.json
 .env
 .env.*
+!.env.example
 *.pfx
 secrets.json
 

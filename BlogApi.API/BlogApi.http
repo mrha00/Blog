@@ -1,0 +1,39 @@
+@host = http://localhost:6133
+@token = {{login.response.body.token}}
+
+### 1 Register
+# @name register
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "email": "testuser@example.com",
+  "password": "Test123!"
+}
+
+### 2 Login
+# @name login
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "Admin123!"
+}
+
+### 3 Me
+GET {{host}}/api/auth/me
+Authorization: Bearer {{token}}
+
+### Posts list
+GET {{host}}/api/posts?page=1&pageSize=10
+
+### Post detail
+GET {{host}}/api/posts/1
+
+### Categories
+GET {{host}}/api/categories
+
+### Tags
+GET {{host}}/api/tags

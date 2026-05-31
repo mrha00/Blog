@@ -1,9 +1,11 @@
 using System.Text;
 using BlogApi.API.Middlewares;
 using BlogApi.Core.Configuration;
+using BlogApi.Infrastructure.Data;
 using BlogApi.Infrastructure.Extensions;
 using BlogApi.Services.Extensions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -77,6 +79,12 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await db.Database.MigrateAsync();
+}
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
