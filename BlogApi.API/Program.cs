@@ -5,6 +5,7 @@ using BlogApi.Infrastructure.Data;
 using BlogApi.Infrastructure.Extensions;
 using BlogApi.Services.Extensions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -28,6 +29,30 @@ else
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
+builder.Services.Configure<CorsSettings>(builder.Configuration.GetSection("Cors"));
+
+var corsSettings = builder.Configuration.GetSection("Cors").Get<CorsSettings>() ?? new CorsSettings();
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        if (corsSettings.AllowedOrigins.Length > 0)
+        {
+            policy.WithOrigins(corsSettings.AllowedOrigins)
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        }
+        else if (builder.Environment.IsDevelopment())
+        {
+            policy.SetIsOriginAllowed(_ => true)
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        }
+    });
+});
+
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<AppDbContext>();
 
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
     ?? throw new InvalidOperationException("Jwt configuration is missing");
@@ -97,8 +122,13 @@ if (app.Environment.IsDevelopment())
 
 app.UseStaticFiles();
 app.UseHttpsRedirection();
+app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    Predicate = _ => true
+});
 
 app.Run();
