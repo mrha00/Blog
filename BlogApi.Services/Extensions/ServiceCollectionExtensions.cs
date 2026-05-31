@@ -21,6 +21,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUploadService, UploadService>();
         services.AddScoped<ViewCountService>();
         services.AddScoped<PostCacheService>();
+        services.AddScoped<PostListCacheService>();
 
         return services;
     }

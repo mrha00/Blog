@@ -432,7 +432,7 @@ export default function Editor() {
                   <p className="text-xs text-gray-600 font-semibold mb-1">
                     拖拽文章封面至此区域，或 <span className="text-blue-700 underline">浏览本地文件</span>
                   </p>
-                  <p className="text-[10px] text-gray-400">支持 formats: PG, PNG, GIF, WEBP</p>
+                  <p className="text-[10px] text-gray-400">支持 JPG / JPEG / PNG，最大 5MB</p>
                 </>
               )}
             </div>

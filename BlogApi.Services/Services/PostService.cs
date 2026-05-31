@@ -16,6 +16,7 @@ public class PostService : IPostService
     private readonly IFileStorageService _fileStorageService;
     private readonly ViewCountService _viewCountService;
     private readonly PostCacheService _postCacheService;
+    private readonly PostListCacheService _postListCacheService;
 
     public PostService(
         IPostRepository postRepository,
@@ -23,7 +24,8 @@ public class PostService : IPostService
         ITagRepository tagRepository,
         IFileStorageService fileStorageService,
         ViewCountService viewCountService,
-        PostCacheService postCacheService)
+        PostCacheService postCacheService,
+        PostListCacheService postListCacheService)
     {
         _postRepository = postRepository;
         _categoryRepository = categoryRepository;
@@ -31,6 +33,7 @@ public class PostService : IPostService
         _fileStorageService = fileStorageService;
         _viewCountService = viewCountService;
         _postCacheService = postCacheService;
+        _postListCacheService = postListCacheService;
     }
 
     public async Task<PostDetailItem> CreateAsync(CreatePostRequest request, int userId)
@@ -61,6 +64,7 @@ public class PostService : IPostService
         }
 
         post = await _postRepository.AddAsync(post);
+        await _postListCacheService.InvalidateAsync();
         return (await _postRepository.GetDetailByIdAsync(post.Id))!;
     }
 
@@ -98,6 +102,7 @@ public class PostService : IPostService
 
         await _postRepository.UpdateAsync(post);
         await _postCacheService.InvalidateAsync(id);
+        await _postListCacheService.InvalidateAsync();
 
         if (!string.Equals(previousCoverUrl, request.CoverUrl, StringComparison.Ordinal))
         {
@@ -117,6 +122,7 @@ public class PostService : IPostService
         await _postRepository.DeleteAsync(post);
         _fileStorageService.TryDeleteUpload(coverUrl);
         await _postCacheService.InvalidateAsync(id);
+        await _postListCacheService.InvalidateAsync();
     }
 
     public async Task<PostDetailItem> PublishAsync(int id, int userId, bool isAdmin)
@@ -132,6 +138,7 @@ public class PostService : IPostService
 
         await _postRepository.UpdateAsync(post);
         await _postCacheService.InvalidateAsync(id);
+        await _postListCacheService.InvalidateAsync();
         return (await _postRepository.GetDetailByIdAsync(id))!;
     }
 
@@ -147,6 +154,7 @@ public class PostService : IPostService
 
         await _postRepository.UpdateAsync(post);
         await _postCacheService.InvalidateAsync(id);
+        await _postListCacheService.InvalidateAsync();
         return (await _postRepository.GetDetailByIdAsync(id))!;
     }
 
@@ -157,36 +165,30 @@ public class PostService : IPostService
             throw new NotFoundException("文章不存在");
         }
 
-        var post = await _postRepository.GetByIdWithTagsAsync(id);
-        if (post is null)
+        var item = await _postCacheService.GetAsync(id);
+        if (item is null)
         {
-            await _postCacheService.SetNotFoundAsync(id);
-            throw new NotFoundException("文章不存在");
+            item = await _postRepository.GetDetailByIdAsync(id);
+            if (item is null)
+            {
+                await _postCacheService.SetNotFoundAsync(id);
+                throw new NotFoundException("文章不存在");
+            }
+
+            await _postCacheService.SetAsync(id, item);
         }
 
-        if (post.Status != PostStatus.Published)
+        if (item.Status != PostStatus.Published)
         {
             if (!userId.HasValue)
             {
                 throw new ForbiddenException("无权查看该文章");
             }
 
-            EnsureAuthorOrAdmin(post.AuthorId, userId.Value, isAdmin);
+            EnsureAuthorOrAdmin(item.AuthorId, userId.Value, isAdmin);
         }
 
         await _viewCountService.IncrementViewCountAsync(id, clientIp);
-
-        var item = await _postCacheService.GetAsync(id);
-        if (item is null)
-        {
-            item = await _postRepository.GetDetailByIdAsync(id);
-            if (item is not null)
-            {
-                await _postCacheService.SetAsync(id, item);
-            }
-        }
-
-        item ??= (await _postRepository.GetDetailByIdAsync(id))!;
 
         var viewCount = await _postRepository.GetViewCountAsync(id) ?? item.ViewCount;
         return item with { ViewCount = viewCount };
@@ -194,17 +196,16 @@ public class PostService : IPostService
 
     public async Task<PagedResult<PostListItem>> GetPostsAsync(PostQuery query)
     {
-        if (query.Page < 1)
+        var normalized = NormalizeQuery(query);
+        var cached = await _postListCacheService.GetAsync(normalized);
+        if (cached is not null)
         {
-            throw new ArgumentException("页码从 1 开始");
+            return cached;
         }
 
-        var normalized = query with
-        {
-            PageSize = Math.Clamp(query.PageSize, 1, 100)
-        };
-
-        return await _postRepository.GetPostsAsync(normalized);
+        var result = await _postRepository.GetPostsAsync(normalized);
+        await _postListCacheService.SetAsync(normalized, result);
+        return result;
     }
 
     public async Task<PagedResult<PostListItem>> GetMyPostsAsync(int userId, PostQuery query)
@@ -214,13 +215,33 @@ public class PostService : IPostService
             throw new ArgumentException("页码从 1 开始");
         }
 
-        var normalized = query with
+        var normalized = NormalizeQuery(query with
         {
-            PageSize = Math.Clamp(query.PageSize, 1, 100),
             AuthorId = userId
-        };
+        });
 
-        return await _postRepository.GetPostsAsync(normalized);
+        var cached = await _postListCacheService.GetAsync(normalized);
+        if (cached is not null)
+        {
+            return cached;
+        }
+
+        var result = await _postRepository.GetPostsAsync(normalized);
+        await _postListCacheService.SetAsync(normalized, result);
+        return result;
+    }
+
+    private static PostQuery NormalizeQuery(PostQuery query)
+    {
+        if (query.Page < 1)
+        {
+            throw new ArgumentException("页码从 1 开始");
+        }
+
+        return query with
+        {
+            PageSize = Math.Clamp(query.PageSize, 1, 100)
+        };
     }
 
     private static void EnsureAuthorOrAdmin(int authorId, int userId, bool isAdmin)

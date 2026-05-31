@@ -44,8 +44,12 @@ api.interceptors.response.use(
 
 export function getApiError(error: unknown, fallback = '请求失败'): string {
   if (axios.isAxiosError(error)) {
-    const data = error.response?.data as { error?: string; message?: string } | undefined;
-    return data?.error || data?.message || error.message || fallback;
+    const data = error.response?.data as {
+      error?: string;
+      message?: string;
+      Message?: string;
+    } | undefined;
+    return data?.message || data?.Message || data?.error || error.message || fallback;
   }
   if (error instanceof Error) {
     return error.message;
@@ -55,9 +59,11 @@ export function getApiError(error: unknown, fallback = '请求失败'): string {
 
 export interface AuthResult {
   token: string;
+  userId?: number;
   username: string;
   nickname?: string;
   role: string;
+  avatarUrl?: string;
 }
 
 export async function loginUser(username: string, password: string): Promise<AuthResult> {
@@ -81,13 +87,35 @@ export async function registerUser(
 }
 
 export async function getMe(): Promise<{
-  userId: string;
+  userId: number;
   username: string;
   nickname?: string;
   role: string;
+  avatarUrl?: string;
+  email?: string;
+  createdAt?: string;
 }> {
   const res = await api.get('/api/auth/me');
   return res.data;
+}
+
+export async function updateProfile(payload: {
+  nickname?: string;
+  avatarUrl?: string;
+}): Promise<{
+  userId: number;
+  username: string;
+  nickname: string;
+  role: string;
+  avatarUrl?: string;
+  email?: string;
+}> {
+  const res = await api.put('/api/auth/profile', payload);
+  return res.data;
+}
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  await api.put('/api/auth/password', { currentPassword, newPassword });
 }
 
 export async function resolveSessionUser(token: string): Promise<User> {
@@ -97,6 +125,8 @@ export async function resolveSessionUser(token: string): Promise<User> {
     id: Number(me.userId),
     username: me.username,
     nickname: me.nickname || me.username,
+    avatarUrl: me.avatarUrl,
+    email: me.email,
     role: me.role,
   };
 }
@@ -294,6 +324,11 @@ export async function getMyPosts(filters: {
   }
   const res = await api.get('/api/posts/mine', { params });
   return parsePostsResponse(res.data, page);
+}
+
+export async function updateTag(id: number, name: string): Promise<Tag> {
+  const res = await api.put<Tag>(`/api/tags/${id}`, { name });
+  return res.data;
 }
 
 export async function deleteTag(id: number): Promise<void> {

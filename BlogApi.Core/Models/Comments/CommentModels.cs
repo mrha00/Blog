@@ -7,6 +7,7 @@ public record CommentItem(
     string Content,
     string UserName,
     int UserId,
+    string? AuthorAvatarUrl,
     DateTime CreatedAt,
     int? ParentId);
 
@@ -16,6 +17,7 @@ public class CommentTreeItem
     public string Content { get; set; } = string.Empty;
     public string UserName { get; set; } = string.Empty;
     public int UserId { get; set; }
+    public string? AuthorAvatarUrl { get; set; }
     public DateTime CreatedAt { get; set; }
     public int? ParentId { get; set; }
     public List<CommentTreeItem> Replies { get; set; } = new();

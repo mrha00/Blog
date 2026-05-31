@@ -7,12 +7,14 @@ export function getCommentAuthorName(comment: Comment): string {
 export function normalizeComment(raw: Comment): Comment {
   const name = raw.userName || raw.username || raw.author;
   const userId = raw.userId ?? raw.user_id;
+  const authorAvatarUrl = raw.authorAvatarUrl;
   return {
     ...raw,
     userName: name,
     username: name,
     userId,
     user_id: userId,
+    authorAvatarUrl,
   };
 }
 

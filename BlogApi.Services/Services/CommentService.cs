@@ -91,6 +91,7 @@ public class CommentService : ICommentService
             Content = item.Content,
             UserName = item.UserName,
             UserId = item.UserId,
+            AuthorAvatarUrl = item.AuthorAvatarUrl,
             CreatedAt = item.CreatedAt,
             ParentId = item.ParentId,
             Replies = new List<CommentTreeItem>()

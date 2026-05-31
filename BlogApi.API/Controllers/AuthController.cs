@@ -38,15 +38,46 @@ public class AuthController : ControllerBase
 
     [Authorize]
     [HttpGet("me")]
-    public IActionResult Me()
+    public async Task<ActionResult<UserProfileDto>> Me()
     {
-        return Ok(new
+        var userId = GetCurrentUserId();
+        var profile = await _authService.GetProfileAsync(userId);
+        return Ok(MapToProfileDto(profile));
+    }
+
+    [Authorize]
+    [HttpPut("profile")]
+    public async Task<ActionResult<UserProfileDto>> UpdateProfile(UpdateProfileDto dto)
+    {
+        var userId = GetCurrentUserId();
+        var profile = await _authService.UpdateProfileAsync(
+            userId,
+            new UpdateProfileRequest(dto.Nickname, dto.AvatarUrl));
+
+        return Ok(MapToProfileDto(profile));
+    }
+
+    [Authorize]
+    [HttpPut("password")]
+    public async Task<IActionResult> ChangePassword(ChangePasswordDto dto)
+    {
+        var userId = GetCurrentUserId();
+        await _authService.ChangePasswordAsync(
+            userId,
+            new ChangePasswordRequest(dto.CurrentPassword, dto.NewPassword));
+
+        return NoContent();
+    }
+
+    private int GetCurrentUserId()
+    {
+        var raw = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!int.TryParse(raw, out var userId))
         {
-            UserId = User.FindFirstValue(ClaimTypes.NameIdentifier),
-            Username = User.FindFirstValue(ClaimTypes.Name),
-            Nickname = User.FindFirstValue("nickname"),
-            Role = User.FindFirstValue(ClaimTypes.Role)
-        });
+            throw new UnauthorizedAccessException("无效的用户身份");
+        }
+
+        return userId;
     }
 
     private static AuthResponseDto MapToResponse(AuthTokenResult result)
@@ -54,9 +85,25 @@ public class AuthController : ControllerBase
         return new AuthResponseDto
         {
             Token = result.Token,
+            UserId = result.UserId,
             Username = result.Username,
             Nickname = result.Nickname,
-            Role = result.Role
+            Role = result.Role,
+            AvatarUrl = result.AvatarUrl
+        };
+    }
+
+    private static UserProfileDto MapToProfileDto(UserProfile profile)
+    {
+        return new UserProfileDto
+        {
+            UserId = profile.UserId,
+            Username = profile.Username,
+            Nickname = profile.Nickname,
+            Email = profile.Email,
+            Role = profile.Role,
+            AvatarUrl = profile.AvatarUrl,
+            CreatedAt = profile.CreatedAt
         };
     }
 }

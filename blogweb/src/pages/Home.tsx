@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { getPosts, getCategories, getTags, isDraftStatus, resolveAssetUrl } from '../api';
+import { getPosts, getMyPosts, getCategories, getTags, isDraftStatus, resolveAssetUrl } from '../api';
 import { Post, Category, Tag } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { formatAuthorMeta } from '../utils/displayName';
@@ -10,7 +10,7 @@ import {
   sortBrowseCategories,
   getCategoryAccent,
 } from '../utils/catalogFilters';
-import { Search, Calendar, Eye, Hash, LayoutGrid, FolderOpen, AlertCircle, PlusCircle, RefreshCw } from 'lucide-react';
+import { Search, Calendar, Eye, Hash, LayoutGrid, FolderOpen, AlertCircle, PlusCircle, RefreshCw, FileText } from 'lucide-react';
 
 export default function Home() {
   const { user } = useAuth();
@@ -32,6 +32,7 @@ export default function Home() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [errorStatus, setErrorStatus] = useState<string | null>(null);
+  const [browseMode, setBrowseMode] = useState<'all' | 'mine'>('all');
 
   // Load auxiliary lists (categories & tags)
   useEffect(() => {
@@ -52,16 +53,23 @@ export default function Home() {
 
   // Fetch articles based on filter states
   useEffect(() => {
+    if (browseMode === 'mine' && !user) {
+      setBrowseMode('all');
+      return;
+    }
+
     const fetchArticles = async () => {
       setLoading(true);
       setErrorStatus(null);
       try {
-        const res = await getPosts({
+        const fetcher = browseMode === 'mine' ? getMyPosts : getPosts;
+        const res = await fetcher({
           page,
           pageSize: 6,
           search: searchWord,
-          categoryId: activeCategory,
-          tagId: activeTag,
+          ...(browseMode === 'all'
+            ? { categoryId: activeCategory, tagId: activeTag }
+            : {}),
         });
         setPosts(res.list);
         setTotal(res.total);
@@ -76,7 +84,7 @@ export default function Home() {
       }
     };
     fetchArticles();
-  }, [page, searchWord, activeCategory, activeTag]);
+  }, [page, searchWord, activeCategory, activeTag, browseMode, user]);
 
   // Handle actions
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -151,8 +159,44 @@ export default function Home() {
         </div>
       </form>
 
+      {user && (
+        <div className="flex gap-2 mb-6">
+          <button
+            type="button"
+            onClick={() => {
+              setBrowseMode('all');
+              searchParams.set('page', '1');
+              setSearchParams(searchParams);
+            }}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+              browseMode === 'all'
+                ? 'bg-blue-700 text-white shadow-sm'
+                : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-200'
+            }`}
+          >
+            全部文章
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setBrowseMode('mine');
+              searchParams.set('page', '1');
+              setSearchParams(searchParams);
+            }}
+            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+              browseMode === 'mine'
+                ? 'bg-amber-600 text-white shadow-sm'
+                : 'bg-white text-gray-600 border border-gray-200 hover:border-amber-200'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            我的草稿
+          </button>
+        </div>
+      )}
+
       {/* Category filter */}
-      {browseCategories.length > 0 && (
+      {browseMode === 'all' && browseCategories.length > 0 && (
         <div className="mb-5 rounded-xl border border-gray-100 bg-gradient-to-b from-gray-50/90 to-white p-3.5 shadow-sm">
           <div className="flex items-center gap-1.5 mb-2.5 text-sm font-medium text-gray-700">
             <LayoutGrid className="w-4 h-4 text-gray-400" />
@@ -192,7 +236,7 @@ export default function Home() {
       )}
 
       {/* Tag filter */}
-      {browseTags.length > 0 && (
+      {browseMode === 'all' && browseTags.length > 0 && (
         <div className="mb-6 rounded-xl border border-gray-100 bg-white p-3.5 shadow-sm">
           <div className="flex items-center justify-between mb-2.5">
             <div className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
@@ -230,7 +274,7 @@ export default function Home() {
       )}
 
       {/* Clear Filter Display */}
-      {hasActiveFilters && (
+      {hasActiveFilters && browseMode === 'all' && (
         <div className="flex justify-between items-center bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-8 text-sm text-blue-800">
           <div className="flex items-center gap-2">
             <span>
@@ -296,9 +340,13 @@ export default function Home() {
       ) : posts.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-200 py-16 px-6 text-center shadow-sm">
           <FolderOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <h3 className="text-gray-900 font-bold text-lg mb-1">暂无文章 / 列表为空</h3>
+          <h3 className="text-gray-900 font-bold text-lg mb-1">
+            {browseMode === 'mine' ? '暂无草稿 / 我的文章' : '暂无文章 / 列表为空'}
+          </h3>
           <p className="text-gray-500 text-sm max-w-sm mx-auto mb-6">
-            没有找到匹配当前筛选条件的内容。你可以尝试清除一些筛选器或添加新文章！
+            {browseMode === 'mine'
+              ? '你还没有保存任何草稿或文章，去编辑器写一篇吧。'
+              : '没有找到匹配当前筛选条件的内容。你可以尝试清除一些筛选器或添加新文章！'}
           </p>
           {user ? (
             <Link

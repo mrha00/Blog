@@ -18,6 +18,7 @@ import { useAuth } from '../context/AuthContext';
 import { canUserManagePost } from '../utils/apiHelpers';
 import { getCommentAuthorName, groupCommentsFromFlat } from '../utils/commentHelpers';
 import { formatAuthorMeta } from '../utils/displayName';
+import UserAvatar from '../components/UserAvatar';
 import {
   Calendar,
   Eye,
@@ -235,8 +236,15 @@ export default function Detail() {
     return (
       <div className={`${depth > 0 ? 'mt-1' : ''}`}>
         <div className="py-2.5 px-1 border-b border-gray-100 last:border-b-0">
-          <div className="flex items-baseline justify-between gap-2 mb-1">
-            <span className="text-xs font-medium text-gray-800">{commentAuthor}</span>
+          <div className="flex items-start justify-between gap-2 mb-1">
+            <div className="flex items-center gap-2 min-w-0">
+              <UserAvatar
+                name={commentAuthor}
+                avatarUrl={comment.authorAvatarUrl}
+                size="sm"
+              />
+              <span className="text-xs font-medium text-gray-800 truncate">{commentAuthor}</span>
+            </div>
             <span className="text-[10px] text-gray-400 shrink-0">{formattedCDate}</span>
           </div>
           <p className="text-sm text-gray-700 leading-snug break-words whitespace-pre-wrap">{comment.content}</p>

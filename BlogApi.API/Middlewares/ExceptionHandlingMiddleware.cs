@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using BlogApi.API.Common;
 using BlogApi.Core.Exceptions;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,6 +8,10 @@ namespace BlogApi.API.Middlewares;
 
 public class ExceptionHandlingMiddleware
 {
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
     private readonly RequestDelegate _next;
     private readonly ILogger<ExceptionHandlingMiddleware> _logger;
 
@@ -51,13 +56,7 @@ public class ExceptionHandlingMiddleware
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = (int)statusCode;
 
-        var response = new
-        {
-            success = false,
-            error = message,
-            statusCode = (int)statusCode
-        };
-
-        await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+        var response = ApiResponse<object>.Fail((int)statusCode, message);
+        await context.Response.WriteAsync(JsonSerializer.Serialize(response, JsonOptions));
     }
 }

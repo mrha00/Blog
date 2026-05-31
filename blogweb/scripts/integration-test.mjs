@@ -83,6 +83,17 @@ async function main() {
     body: JSON.stringify({ name: tagName }),
   });
   check(createTag.status === 200 || createTag.status === 201, 'create tag failed');
+  const tagId = createTag.body.id;
+
+  const updatedTagName = `${tagName}-upd`;
+  const updateTagRes = await request(`/api/tags/${tagId}`, {
+    method: 'PUT',
+    headers: adminAuth,
+    body: JSON.stringify({ name: updatedTagName }),
+  });
+  check(updateTagRes.status === 200 && updateTagRes.body.name === updatedTagName, 'update tag failed');
+
+  await request(`/api/tags/${tagId}`, { method: 'DELETE', headers: adminAuth });
 
   const postTitle = `integration-${Date.now()}`;
   const create = await request('/api/posts', {
@@ -205,6 +216,36 @@ async function main() {
 
   const mine = await request('/api/posts/mine?page=1&pageSize=5', { headers: adminAuth });
   check(mine.status === 200 && Array.isArray(mine.body.items), 'mine posts failed');
+
+  const me = await request('/api/auth/me', { headers: adminAuth });
+  check(me.status === 200 && me.body.username === 'admin', 'auth me failed');
+
+  const updateProfile = await request('/api/auth/profile', {
+    method: 'PUT',
+    headers: adminAuth,
+    body: JSON.stringify({ nickname: '集成测试管理员' }),
+  });
+  check(updateProfile.status === 200 && updateProfile.body.nickname === '集成测试管理员', 'update profile failed');
+
+  const badAvatar = await request('/api/auth/profile', {
+    method: 'PUT',
+    headers: adminAuth,
+    body: JSON.stringify({ avatarUrl: 'https://evil.example/a.png' }),
+  });
+  check(badAvatar.status === 400, 'invalid avatarUrl should return 400');
+
+  const wrongPwd = await request('/api/auth/password', {
+    method: 'PUT',
+    headers: adminAuth,
+    body: JSON.stringify({ currentPassword: 'wrong', newPassword: '654321' }),
+  });
+  check(wrongPwd.status === 401, 'wrong current password should return 401');
+
+  await request('/api/auth/profile', {
+    method: 'PUT',
+    headers: adminAuth,
+    body: JSON.stringify({ nickname: '博客管理员' }),
+  });
 
   await request(`/api/posts/${postId}`, { method: 'DELETE', headers: adminAuth });
   await request(`/api/categories/${newCatId}`, { method: 'DELETE', headers: adminAuth });

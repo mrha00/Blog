@@ -217,6 +217,7 @@ public class PostsController : ControllerBase
             Content = item.Content,
             UserName = item.UserName,
             UserId = item.UserId,
+            AuthorAvatarUrl = item.AuthorAvatarUrl,
             CreatedAt = item.CreatedAt,
             ParentId = item.ParentId,
             Replies = item.Replies.Select(MapToCommentDto).ToList()

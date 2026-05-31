@@ -8,7 +8,8 @@ public interface ITagRepository
     Task<List<Tag>> GetByIdsAsync(IEnumerable<int> ids);
     Task<Tag?> GetByIdAsync(int id);
     Task<Tag> AddAsync(Tag tag);
-    Task<bool> NameExistsAsync(string name);
+    Task<bool> NameExistsAsync(string name, int? excludeId = null);
     Task<bool> IsUsedByPostsAsync(int id);
+    Task<Tag> UpdateAsync(Tag tag);
     Task DeleteAsync(Tag tag);
 }

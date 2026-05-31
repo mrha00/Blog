@@ -4,8 +4,10 @@ using System.Text;
 using BlogApi.Core.Configuration;
 using BlogApi.Core.Constants;
 using BlogApi.Core.Entities;
+using BlogApi.Core.Exceptions;
 using BlogApi.Core.Interfaces;
 using BlogApi.Core.Models.Auth;
+using BlogApi.Services.Helpers;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -14,11 +16,16 @@ namespace BlogApi.Services.Services;
 public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
+    private readonly IFileStorageService _fileStorageService;
     private readonly JwtSettings _jwtSettings;
 
-    public AuthService(IUserRepository userRepository, IOptions<JwtSettings> jwtSettings)
+    public AuthService(
+        IUserRepository userRepository,
+        IFileStorageService fileStorageService,
+        IOptions<JwtSettings> jwtSettings)
     {
         _userRepository = userRepository;
+        _fileStorageService = fileStorageService;
         _jwtSettings = jwtSettings.Value;
     }
 
@@ -65,10 +72,105 @@ public class AuthService : IAuthService
         return CreateTokenResult(user);
     }
 
+    public async Task<UserProfile> GetProfileAsync(int userId)
+    {
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user is null)
+        {
+            throw new NotFoundException("用户不存在");
+        }
+
+        return MapToProfile(user);
+    }
+
+    public async Task<UserProfile> UpdateProfileAsync(int userId, UpdateProfileRequest request)
+    {
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user is null)
+        {
+            throw new NotFoundException("用户不存在");
+        }
+
+        if (request.Nickname is not null)
+        {
+            var nickname = request.Nickname.Trim();
+            if (nickname.Length < 2 || nickname.Length > 32)
+            {
+                throw new ArgumentException("昵称长度需在 2–32 个字符之间");
+            }
+
+            user.Nickname = nickname;
+        }
+
+        if (request.AvatarUrl is not null)
+        {
+            var avatarUrl = string.IsNullOrWhiteSpace(request.AvatarUrl)
+                ? null
+                : request.AvatarUrl.Trim();
+
+            UploadUrlValidator.ValidateOrThrow(avatarUrl);
+
+            if (!string.Equals(user.AvatarUrl, avatarUrl, StringComparison.OrdinalIgnoreCase))
+            {
+                _fileStorageService.TryDeleteUpload(user.AvatarUrl);
+                user.AvatarUrl = avatarUrl;
+            }
+        }
+
+        user = await _userRepository.UpdateAsync(user);
+        return MapToProfile(user);
+    }
+
+    public async Task ChangePasswordAsync(int userId, ChangePasswordRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.CurrentPassword) ||
+            string.IsNullOrWhiteSpace(request.NewPassword))
+        {
+            throw new ArgumentException("当前密码和新密码不能为空");
+        }
+
+        if (request.NewPassword.Length < 6)
+        {
+            throw new ArgumentException("新密码至少 6 个字符");
+        }
+
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user is null)
+        {
+            throw new NotFoundException("用户不存在");
+        }
+
+        if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+        {
+            throw new UnauthorizedAccessException("当前密码不正确");
+        }
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        await _userRepository.UpdateAsync(user);
+    }
+
     private AuthTokenResult CreateTokenResult(User user)
     {
         var token = GenerateToken(user);
-        return new AuthTokenResult(token, user.Id, user.Username, user.Nickname, user.Role);
+        return new AuthTokenResult(
+            token,
+            user.Id,
+            user.Username,
+            user.Nickname,
+            user.Role,
+            user.AvatarUrl);
+    }
+
+    private static UserProfile MapToProfile(User user)
+    {
+        return new UserProfile(
+            user.Id,
+            user.Username,
+            user.Nickname,
+            user.Email,
+            user.Role,
+            user.AvatarUrl,
+            user.CreatedAt);
     }
 
     private string GenerateToken(User user)

@@ -2,6 +2,7 @@ export interface User {
   id: number;
   username: string;
   nickname?: string;
+  avatarUrl?: string;
   email?: string;
   role?: string;
 }
@@ -30,6 +31,7 @@ export interface Comment {
   username?: string;
   userId?: number;
   user_id?: number;
+  authorAvatarUrl?: string;
   createdAt?: string;
   created_at?: string;
   // Frontend virtual property for nested comments

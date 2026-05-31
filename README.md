@@ -83,7 +83,13 @@ cd blogweb
 npm run test:all
 ```
 
-（集成/E2E 需后端在 6133 端口运行。）
+后端 xUnit（WebApplicationFactory，无需启动 API）：
+
+```bash
+dotnet test BlogApi.API.Tests/BlogApi.API.Tests.csproj
+```
+
+（`npm run test:integration` / E2E 需后端在 6133 端口运行。）
 
 ## API 概览
 

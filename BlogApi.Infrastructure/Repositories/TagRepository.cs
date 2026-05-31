@@ -37,9 +37,10 @@ public class TagRepository : ITagRepository
         return tag;
     }
 
-    public async Task<bool> NameExistsAsync(string name)
+    public async Task<bool> NameExistsAsync(string name, int? excludeId = null)
     {
-        return await _db.Tags.AnyAsync(t => t.Name == name);
+        return await _db.Tags.AnyAsync(t =>
+            t.Name == name && (!excludeId.HasValue || t.Id != excludeId.Value));
     }
 
     public async Task<Tag?> GetByIdAsync(int id)
@@ -58,5 +59,12 @@ public class TagRepository : ITagRepository
     {
         _db.Tags.Remove(tag);
         await _db.SaveChangesAsync();
+    }
+
+    public async Task<Tag> UpdateAsync(Tag tag)
+    {
+        _db.Tags.Update(tag);
+        await _db.SaveChangesAsync();
+        return tag;
     }
 }

@@ -34,6 +34,14 @@ public class TagsController : ControllerBase
     }
 
     [Authorize(Roles = Roles.Admin)]
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<TagDto>> UpdateTag(int id, UpdateTagDto dto)
+    {
+        var item = await _tagService.UpdateAsync(id, new UpdateTagRequest(dto.Name));
+        return Ok(MapToDto(item));
+    }
+
+    [Authorize(Roles = Roles.Admin)]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> DeleteTag(int id)
     {

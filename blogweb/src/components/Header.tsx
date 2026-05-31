@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { User, ChevronDown, Plus, LogOut, Tags, Folder, BookOpen } from 'lucide-react';
+import { ChevronDown, Plus, LogOut, Tags, Folder, BookOpen, Settings } from 'lucide-react';
 import { getDisplayName } from '../utils/displayName';
+import UserAvatar from './UserAvatar';
 
 export default function Header() {
   const { user, logout, isAdmin } = useAuth();
@@ -82,7 +83,7 @@ export default function Header() {
                   onBlur={() => setTimeout(() => setDropdownOpen(false), 200)}
                   className="flex items-center gap-1.5 text-gray-700 hover:text-blue-700 transition-colors duration-200 font-medium cursor-pointer"
                 >
-                  <User className="w-5 h-5 text-gray-500" />
+                  <UserAvatar user={user} size="sm" />
                   <span className="hidden sm:inline-block max-w-[100px] truncate">
                     {getDisplayName(user)}
                   </span>
@@ -114,6 +115,15 @@ export default function Header() {
                         <hr className="border-gray-100 my-1" />
                       </>
                     )}
+                    <Link
+                      to="/profile"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-700 transition-colors"
+                    >
+                      <Settings className="w-4 h-4 text-gray-400" />
+                      <span>个人资料</span>
+                    </Link>
+                    <hr className="border-gray-100 my-1" />
                     <button
                       onClick={handleLogout}
                       className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors cursor-pointer"

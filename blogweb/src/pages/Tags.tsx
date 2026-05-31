@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { getTags, createTag, deleteTag, getApiError } from '../api';
+import { getTags, createTag, updateTag, deleteTag, getApiError } from '../api';
 import { Tag } from '../types';
-import { Hash, Plus, AlertCircle, RefreshCw, X, Trash2 } from 'lucide-react';
+import { Hash, Plus, AlertCircle, RefreshCw, X, Trash2, Edit } from 'lucide-react';
 
 export default function Tags() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorStatus, setErrorStatus] = useState<string | null>(null);
 
-  // Form State
   const [newTagName, setNewTagName] = useState('');
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const fetchTagsList = async () => {
@@ -18,11 +18,9 @@ export default function Tags() {
     try {
       const data = await getTags();
       setTags(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Fetch tags error:', err);
-      setErrorStatus(
-        err.message || '获取标签列表失败。请确保 API 已经启动在 http://localhost:6133'
-      );
+      setErrorStatus(getApiError(err, '获取标签列表失败'));
     } finally {
       setLoading(false);
     }
@@ -34,7 +32,7 @@ export default function Tags() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanName = newTagName.trim().replace(/^#/, ''); // Strip preceding hashes if typed
+    const cleanName = newTagName.trim().replace(/^#/, '');
     if (!cleanName) {
       setErrorStatus('标签名称不能为空');
       return;
@@ -43,15 +41,32 @@ export default function Tags() {
     setSubmitting(true);
     setErrorStatus(null);
     try {
-      const createdItem = await createTag(cleanName);
-      setTags([...tags, createdItem]);
+      if (editingId) {
+        const updated = await updateTag(editingId, cleanName);
+        setTags(tags.map((t) => (t.id === editingId ? updated : t)));
+        setEditingId(null);
+      } else {
+        const createdItem = await createTag(cleanName);
+        setTags([...tags, createdItem]);
+      }
       setNewTagName('');
-    } catch (err: any) {
-      console.error('Create tag error:', err);
-      setErrorStatus(getApiError(err, '创建标签失败'));
+    } catch (err: unknown) {
+      console.error('Submit tag error:', err);
+      setErrorStatus(getApiError(err, editingId ? '更新标签失败' : '创建标签失败'));
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleEditClick = (tag: Tag) => {
+    setErrorStatus(null);
+    setEditingId(tag.id);
+    setNewTagName(tag.name);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setNewTagName('');
   };
 
   const handleDeleteTag = async (tag: Tag) => {
@@ -60,6 +75,9 @@ export default function Tags() {
     try {
       await deleteTag(tag.id);
       setTags(tags.filter((t) => t.id !== tag.id));
+      if (editingId === tag.id) {
+        handleCancelEdit();
+      }
     } catch (err: unknown) {
       setErrorStatus(getApiError(err, '删除标签失败'));
     }
@@ -94,11 +112,10 @@ export default function Tags() {
         </div>
       )}
 
-      {/* Input Form Box */}
       <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm mb-8">
         <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-4 flex items-center gap-1">
           <Hash className="w-3.5 h-3.5 text-blue-700" />
-          <span>新建检索标签</span>
+          <span>{editingId ? '编辑检索标签' : '新建检索标签'}</span>
         </h3>
         <form onSubmit={handleSubmit} className="flex gap-2">
           <div className="relative flex items-center bg-gray-50 border border-gray-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 rounded-xl px-3 transition-all flex-1">
@@ -120,12 +137,20 @@ export default function Tags() {
             className="bg-blue-700 hover:bg-blue-800 text-white font-semibold text-xs px-6 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer flex items-center gap-1"
           >
             <Plus className="w-4 h-4" />
-            <span>添加</span>
+            <span>{editingId ? '保存更改' : '添加'}</span>
           </button>
+          {editingId && (
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              className="text-xs text-gray-600 border border-gray-200 px-4 py-2.5 rounded-xl hover:bg-gray-50 cursor-pointer"
+            >
+              取消
+            </button>
+          )}
         </form>
       </div>
 
-      {/* Tags Cloud Panel */}
       <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
         <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
           标签云 ({tags.length})
@@ -141,9 +166,19 @@ export default function Tags() {
             {tags.map((tag) => (
               <div
                 key={tag.id}
+                data-testid="tag-chip"
+                data-tag-name={tag.name}
                 className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-700 font-medium"
               >
                 <span>#{tag.name}</span>
+                <button
+                  type="button"
+                  onClick={() => handleEditClick(tag)}
+                  className="text-gray-400 hover:text-blue-700 cursor-pointer p-0.5"
+                  title="编辑标签"
+                >
+                  <Edit className="w-3 h-3" />
+                </button>
                 <button
                   type="button"
                   onClick={() => handleDeleteTag(tag)}

@@ -13,6 +13,8 @@ import Editor from './pages/Editor';
 import Categories from './pages/Categories';
 import Tags from './pages/Tags';
 import AdminRoute from './components/AdminRoute';
+import ProtectedRoute from './components/ProtectedRoute';
+import Profile from './pages/Profile';
 
 export default function App() {
   return (
@@ -29,8 +31,30 @@ export default function App() {
               <Route path="/posts/:id" element={<Detail />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/editor" element={<Editor />} />
-              <Route path="/editor/:id" element={<Editor />} />
+              <Route
+                path="/editor"
+                element={
+                  <ProtectedRoute>
+                    <Editor />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/editor/:id"
+                element={
+                  <ProtectedRoute>
+                    <Editor />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/categories"
                 element={

@@ -10,6 +10,23 @@ test.describe('Admin — categories & tags management', () => {
     await page.goto('/');
   });
 
+  test('admin creates and updates a tag', async ({ page }) => {
+    const tagName = `e2e-tag-${Date.now()}`;
+    const updatedName = `${tagName}-updated`;
+
+    await page.goto('/tags');
+    await expect(page.getByTestId('tag-name-input')).toBeVisible({ timeout: 15_000 });
+
+    await page.getByTestId('tag-name-input').fill(tagName);
+    await page.getByRole('button', { name: '添加' }).click();
+    await expect(page.getByText(tagName)).toBeVisible({ timeout: 10_000 });
+
+    await page.locator('[data-testid="tag-chip"][data-tag-name="' + tagName + '"]').getByTitle('编辑标签').click();
+    await page.getByTestId('tag-name-input').fill(updatedName);
+    await page.getByRole('button', { name: '保存更改' }).click();
+    await expect(page.getByText(updatedName)).toBeVisible({ timeout: 10_000 });
+  });
+
   test('admin creates a new tag', async ({ page }) => {
     const tagName = `e2e-tag-${Date.now()}`;
 

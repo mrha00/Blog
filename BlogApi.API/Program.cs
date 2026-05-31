@@ -1,4 +1,5 @@
 using System.Text;
+using BlogApi.API.Common;
 using BlogApi.API.Middlewares;
 using BlogApi.Core.Configuration;
 using BlogApi.Infrastructure.Data;
@@ -73,7 +74,26 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var errors = context.ModelState
+                .Where(entry => entry.Value?.Errors.Count > 0)
+                .SelectMany(entry => entry.Value!.Errors.Select(error => new ValidationErrorItem
+                {
+                    Field = entry.Key,
+                    Message = string.IsNullOrWhiteSpace(error.ErrorMessage)
+                        ? "参数无效"
+                        : error.ErrorMessage
+                }))
+                .ToList();
+
+            return new Microsoft.AspNetCore.Mvc.BadRequestObjectResult(
+                ApiResponse<object>.Fail(400, "参数校验失败", errors));
+        };
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -108,7 +128,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.MigrateAsync();
+    await DbSchemaEnsurer.EnsureAsync(db);
     await BlogDataSeeder.SeedAsync(db);
 }
 
@@ -133,3 +153,5 @@ app.MapHealthChecks("/health", new HealthCheckOptions
 });
 
 app.Run();
+
+public partial class Program { }

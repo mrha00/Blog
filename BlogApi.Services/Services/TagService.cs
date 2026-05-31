@@ -22,13 +22,40 @@ public class TagService : ITagService
 
     public async Task<TagItem> CreateAsync(CreateTagRequest request)
     {
-        if (await _tagRepository.NameExistsAsync(request.Name))
+        var name = request.Name.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("标签名不能为空");
+        }
+
+        if (await _tagRepository.NameExistsAsync(name))
         {
             throw new InvalidOperationException("标签名已存在");
         }
 
-        var tag = new Tag { Name = request.Name };
+        var tag = new Tag { Name = name };
         tag = await _tagRepository.AddAsync(tag);
+        return new TagItem(tag.Id, tag.Name);
+    }
+
+    public async Task<TagItem> UpdateAsync(int id, UpdateTagRequest request)
+    {
+        var name = request.Name.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("标签名不能为空");
+        }
+
+        var tag = await _tagRepository.GetByIdAsync(id)
+            ?? throw new NotFoundException("标签不存在");
+
+        if (await _tagRepository.NameExistsAsync(name, id))
+        {
+            throw new InvalidOperationException("标签名已存在");
+        }
+
+        tag.Name = name;
+        tag = await _tagRepository.UpdateAsync(tag);
         return new TagItem(tag.Id, tag.Name);
     }
 
