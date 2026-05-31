@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
   getPostDetail,
@@ -15,10 +15,11 @@ import {
 } from '../api';
 import { Post, Comment, Category } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { canUserManagePost } from '../utils/apiHelpers';
-import { getCommentAuthorName, groupCommentsFromFlat } from '../utils/commentHelpers';
+import { groupCommentsFromFlat } from '../utils/commentHelpers';
 import { formatAuthorMeta } from '../utils/displayName';
-import UserAvatar from '../components/UserAvatar';
+import CommentThread from '../components/CommentThread';
 import {
   Calendar,
   Eye,
@@ -37,6 +38,7 @@ export default function Detail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
+  const toast = useToast();
   
   // States of Detail Page
   const [post, setPost] = useState<Post | null>(null);
@@ -108,7 +110,7 @@ export default function Detail() {
       const updated = isDraft ? await publishPost(id) : await draftPost(id);
       setPost({ ...post, ...updated, status: updated.status });
     } catch (err: unknown) {
-      alert(`变更发布状态失败: ${getApiError(err)}`);
+      toast.error(`变更发布状态失败: ${getApiError(err)}`);
     }
   };
 
@@ -119,28 +121,43 @@ export default function Detail() {
     try {
       await deletePost(id);
       navigate('/');
-    } catch (err: any) {
-      alert(`删除博文失败: ${getApiError(err)}`);
+    } catch (err: unknown) {
+      toast.error(`删除博文失败: ${getApiError(err)}`);
     }
   };
 
-  const handleDeleteComment = async (commentId: number) => {
+  const handleDeleteComment = useCallback(async (commentId: number) => {
     if (!window.confirm('确定删除这条评论吗？')) return;
     try {
       await deleteComment(commentId);
-      const remaining = flatComments.filter((c) => c.id !== commentId);
-      setFlatComments(remaining);
-      setNestedComments(groupCommentsFromFlat(remaining));
+      setFlatComments((prev) => {
+        const remaining = prev.filter((c) => c.id !== commentId);
+        setNestedComments(groupCommentsFromFlat(remaining));
+        return remaining;
+      });
     } catch (err: unknown) {
-      alert(`删除评论失败: ${getApiError(err)}`);
+      toast.error(`删除评论失败: ${getApiError(err)}`);
     }
-  };
+  }, [toast]);
 
-  const canDeleteComment = (comment: Comment) =>
-    !!user && (isAdmin || comment.userId === user.id || comment.user_id === user.id);
+  const handleReplyTargetChange = useCallback((commentId: number | null) => {
+    setReplyTargetId(commentId);
+    if (commentId !== null) {
+      setReplyInputMap((prev) => ({
+        ...prev,
+        [commentId]: prev[commentId] || '',
+      }));
+    }
+  }, []);
 
-  // Comments submit controllers
-  const handlePostComment = async (e: React.FormEvent, parentId: number | null = null) => {
+  const handleReplyInputChange = useCallback((commentId: number, value: string) => {
+    setReplyInputMap((prev) => ({
+      ...prev,
+      [commentId]: value,
+    }));
+  }, []);
+
+  const handlePostComment = useCallback(async (e: React.FormEvent, parentId: number | null = null) => {
     e.preventDefault();
     if (!id) return;
 
@@ -151,37 +168,35 @@ export default function Detail() {
     setErrorStatus(null);
     try {
       const response = await createComment(id, inputContent.trim(), parentId);
-      
-      // Merge new comment into flat flow
-      const mergedComments = [...flatComments, response];
-      setFlatComments(mergedComments);
-      setNestedComments(groupCommentsFromFlat(mergedComments));
 
-      // Reset targets and forms
+      setFlatComments((prev) => {
+        const mergedComments = [...prev, response];
+        setNestedComments(groupCommentsFromFlat(mergedComments));
+        return mergedComments;
+      });
+
       if (parentId) {
-        setReplyInputMap({
-          ...replyInputMap,
+        setReplyInputMap((prev) => ({
+          ...prev,
           [parentId]: '',
-        });
+        }));
         setReplyTargetId(null);
       } else {
         setRootCommentInput('');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Comment posting encountered exception:', err);
-      setErrorStatus(err.response?.data?.message || err.message || '发布评论失败');
+      setErrorStatus(getApiError(err, '发布评论失败'));
     } finally {
       setSubmittingComment(false);
     }
-  };
+  }, [id, replyInputMap, rootCommentInput]);
 
   // Helper variables
   const canManagePost = post ? canUserManagePost(post, user?.id, isAdmin) : false;
-  const dateStr = post?.createdAt || post?.created_at || '';
+  const dateStr = post?.createdAt || '';
   const formattedDate = dateStr ? new Date(dateStr).toISOString().replace('T', ' ').slice(0, 16) : '';
-  const coverUrl = resolveAssetUrl(
-    post?.coverImage || post?.cover || post?.coverUrl
-  );
+  const coverUrl = resolveAssetUrl(post?.coverUrl);
   const isDraftState = isDraftStatus(post?.status);
 
   // Extract category text
@@ -190,7 +205,7 @@ export default function Detail() {
       ? post.category.name
       : post && typeof post.category === 'string'
       ? post.category
-      : categories.find((c) => c.id === post?.categoryId || c.id === post?.category_id)?.name;
+      : categories.find((c) => c.id === post?.categoryId)?.name;
 
   if (loading) {
     return (
@@ -224,100 +239,6 @@ export default function Detail() {
       </div>
     );
   }
-
-  // Recursive Comment Thread view component
-  const CommentNode: React.FC<{ comment: Comment; depth?: number }> = ({ comment, depth = 0 }) => {
-    const commentAuthor = getCommentAuthorName(comment);
-    const cDate = comment.createdAt || comment.created_at || '';
-    const formattedCDate = cDate ? new Date(cDate).toISOString().split('T')[0] : '刚刚';
-
-    const isReplying = replyTargetId === comment.id;
-
-    return (
-      <div className={`${depth > 0 ? 'mt-1' : ''}`}>
-        <div className="py-2.5 px-1 border-b border-gray-100 last:border-b-0">
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <div className="flex items-center gap-2 min-w-0">
-              <UserAvatar
-                name={commentAuthor}
-                avatarUrl={comment.authorAvatarUrl}
-                size="sm"
-              />
-              <span className="text-xs font-medium text-gray-800 truncate">{commentAuthor}</span>
-            </div>
-            <span className="text-[10px] text-gray-400 shrink-0">{formattedCDate}</span>
-          </div>
-          <p className="text-sm text-gray-700 leading-snug break-words whitespace-pre-wrap">{comment.content}</p>
-          {user && (
-            <div className="flex justify-end gap-3 mt-1.5">
-              {canDeleteComment(comment) && (
-                <button
-                  type="button"
-                  onClick={() => handleDeleteComment(comment.id)}
-                  className="text-[11px] text-red-500 hover:text-red-700 cursor-pointer"
-                >
-                  删除
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  if (isReplying) {
-                    setReplyTargetId(null);
-                  } else {
-                    setReplyTargetId(comment.id);
-                    setReplyInputMap({
-                      ...replyInputMap,
-                      [comment.id]: replyInputMap[comment.id] || '',
-                    });
-                  }
-                }}
-                className="text-[11px] text-gray-500 hover:text-blue-700 cursor-pointer"
-              >
-                {isReplying ? '取消' : '回复'}
-              </button>
-            </div>
-          )}
-        </div>
-
-        {isReplying && user && (
-          <form
-            onSubmit={(e) => handlePostComment(e, comment.id)}
-            className="flex gap-2 items-end py-2 pl-3 ml-2 border-l-2 border-blue-100"
-          >
-            <textarea
-              placeholder={`回复 ${commentAuthor}…`}
-              rows={2}
-              value={replyInputMap[comment.id] || ''}
-              onChange={(e) =>
-                setReplyInputMap({
-                  ...replyInputMap,
-                  [comment.id]: e.target.value,
-                })
-              }
-              className="flex-1 bg-gray-50 border border-gray-200 focus:border-blue-500 rounded-lg px-2.5 py-2 text-xs outline-none text-gray-700 resize-none"
-              required
-            />
-            <button
-              type="submit"
-              disabled={submittingComment}
-              className="bg-blue-700 hover:bg-blue-800 text-white text-[11px] px-3 py-2 rounded-lg cursor-pointer shrink-0"
-            >
-              提交
-            </button>
-          </form>
-        )}
-
-        {comment.replies && comment.replies.length > 0 && (
-          <div className="ml-4 border-l border-gray-100 pl-2">
-            {comment.replies.map((child) => (
-              <CommentNode key={child.id} comment={child} depth={depth + 1} />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
 
   return (
     <div className="max-w-[800px] mx-auto px-6 py-8 flex-grow w-full">
@@ -474,15 +395,18 @@ export default function Detail() {
           )}
         </div>
 
-        {nestedComments.length === 0 ? (
-          <p className="text-center text-xs text-gray-400 py-4">暂无评论，来抢沙发吧</p>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {nestedComments.map((rootComment) => (
-              <CommentNode key={rootComment.id} comment={rootComment} />
-            ))}
-          </div>
-        )}
+        <CommentThread
+          comments={nestedComments}
+          user={user}
+          isAdmin={isAdmin}
+          replyTargetId={replyTargetId}
+          replyInputMap={replyInputMap}
+          submittingComment={submittingComment}
+          onReplyTargetChange={handleReplyTargetChange}
+          onReplyInputChange={handleReplyInputChange}
+          onSubmitReply={handlePostComment}
+          onDeleteComment={handleDeleteComment}
+        />
       </section>
     </div>
   );

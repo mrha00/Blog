@@ -369,15 +369,12 @@ export default function Home() {
         /* Posts Listing */
         <div className="flex flex-col gap-6">
           {posts.map((post) => {
-            const dateStr = post.createdAt || post.created_at || '';
+            const dateStr = post.createdAt || '';
             const formattedDate = dateStr
               ? new Date(dateStr).toISOString().split('T')[0]
               : '最近更新';
-            
-            // Extract cover
-            const coverUrl = resolveAssetUrl(
-              post.coverImage || post.cover || post.coverUrl
-            );
+
+            const coverUrl = resolveAssetUrl(post.coverUrl);
 
             // Extract category string
             const categoryName =
@@ -385,7 +382,7 @@ export default function Home() {
                 ? post.category.name
                 : typeof post.category === 'string'
                 ? post.category
-                : categories.find((c) => c.id === post.categoryId || c.id === post.category_id)?.name;
+                : categories.find((c) => c.id === post.categoryId)?.name;
 
             // Check if published state
             const isDraft = isDraftStatus(post.status);
@@ -418,7 +415,7 @@ export default function Home() {
 
                     {/* Excerpt Summary */}
                     <p className="text-gray-500 font-sans text-sm line-clamp-3 mb-4 leading-relaxed">
-                      {post.summary || post.excerpt || post.content?.replace(/[#*`>_\-]/g, '').slice(0, 140) || '点击阅读全文...'}
+                      {post.summary || post.content?.replace(/[#*`>_\-]/g, '').slice(0, 140) || '点击阅读全文...'}
                     </p>
                   </div>
 

@@ -57,16 +57,16 @@ describe('normalizePost', () => {
     expect(post.status).toBe('draft');
   });
 
-  it('maps category object and cover aliases', () => {
+  it('maps category object and coverUrl', () => {
     const post = normalizePost({
       id: 1,
       title: 't',
       content: 'c',
       status: 1,
-      coverImage: '/img.png',
+      coverUrl: '/uploads/img.png',
       category: { id: 2, name: 'Tech' },
     });
-    expect(post.coverUrl).toBe('/img.png');
+    expect(post.coverUrl).toBe('/uploads/img.png');
     expect(post.categoryName).toBe('Tech');
     expect(post.status).toBe('published');
   });

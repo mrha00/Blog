@@ -1,12 +1,12 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { User } from '../types';
-import { getMe } from '../api';
+import { getMe, logoutSession } from '../api';
 
 interface AuthContextType {
   token: string | null;
   user: User | null;
-  login: (token: string, user: User) => void;
-  logout: () => void;
+  login: (token: string, user: User, refreshToken?: string) => void;
+  logout: () => Promise<void>;
   updateUser: (patch: Partial<User>) => void;
   refreshUser: () => Promise<void>;
   isAdmin: boolean;
@@ -45,17 +45,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const login = (newToken: string, newUser: User) => {
-    localStorage.setItem('token', newToken);
-    persistUser(newUser);
-    setToken(newToken);
-  };
+  const login = useCallback(
+    (newToken: string, newUser: User, refreshToken?: string) => {
+      localStorage.setItem('token', newToken);
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
+      }
+      persistUser(newUser);
+      setToken(newToken);
+    },
+    [persistUser]
+  );
 
-  const logout = () => {
-    localStorage.removeItem('token');
+  const logout = useCallback(async () => {
+    await logoutSession();
     persistUser(null);
     setToken(null);
-  };
+  }, [persistUser]);
 
   const updateUser = useCallback(
     (patch: Partial<User>) => {
@@ -84,7 +90,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (cancelled) return;
         persistUser(mapMeToUser(me));
       } catch {
-        if (!cancelled) logout();
+        if (!cancelled) {
+          await logoutSession();
+          persistUser(null);
+          setToken(null);
+        }
       }
     })();
 
@@ -95,11 +105,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const isAdmin = isAdminRole(user?.role);
 
-  return (
-    <AuthContext.Provider value={{ token, user, login, logout, updateUser, refreshUser, isAdmin }}>
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({ token, user, login, logout, updateUser, refreshUser, isAdmin }),
+    [token, user, login, logout, updateUser, refreshUser, isAdmin]
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {

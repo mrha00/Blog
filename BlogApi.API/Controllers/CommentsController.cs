@@ -1,10 +1,10 @@
-using System.Security.Claims;
+using BlogApi.API.Common;
 using BlogApi.API.DTOs.Comments;
 using BlogApi.Core.Constants;
 using BlogApi.Core.Interfaces;
-using BlogApi.Core.Models.Comments;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace BlogApi.API.Controllers;
 
@@ -21,11 +21,11 @@ public class CommentsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<ActionResult<ApiResponse<object>>> Delete(int id)
     {
         var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         var isAdmin = User.IsInRole(Roles.Admin);
         await _commentService.SoftDeleteAsync(id, userId, isAdmin);
-        return NoContent();
+        return Ok(ApiResponse<object>.Success(null!, "评论已删除"));
     }
 }

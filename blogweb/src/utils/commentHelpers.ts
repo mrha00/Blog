@@ -1,20 +1,15 @@
 import { Comment } from '../types';
 
 export function getCommentAuthorName(comment: Comment): string {
-  return comment.userName || comment.username || comment.author || '热心读者';
+  return comment.userName || '热心读者';
 }
 
 export function normalizeComment(raw: Comment): Comment {
-  const name = raw.userName || raw.username || raw.author;
-  const userId = raw.userId ?? raw.user_id;
-  const authorAvatarUrl = raw.authorAvatarUrl;
   return {
     ...raw,
-    userName: name,
-    username: name,
-    userId,
-    user_id: userId,
-    authorAvatarUrl,
+    userName: raw.userName,
+    userId: raw.userId,
+    authorAvatarUrl: raw.authorAvatarUrl,
   };
 }
 
@@ -43,9 +38,8 @@ export function groupCommentsFromFlat(list: Comment[]): Comment[] {
   cloned.forEach((item) => map.set(item.id, item));
 
   cloned.forEach((item) => {
-    const parentId = item.parentId ?? item.parent_id;
-    if (parentId) {
-      const parent = map.get(Number(parentId));
+    if (item.parentId) {
+      const parent = map.get(Number(item.parentId));
       if (parent) {
         parent.replies!.push(item);
       } else {

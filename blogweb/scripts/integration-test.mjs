@@ -1,5 +1,12 @@
 const BASE = process.env.VITE_API_BASE_URL || 'http://localhost:6133';
 
+function unwrap(body) {
+  if (body && typeof body === 'object' && 'data' in body && 'code' in body) {
+    return body.data;
+  }
+  return body;
+}
+
 async function request(path, options = {}) {
   const res = await fetch(`${BASE}${path}`, options);
   const text = await res.text();
@@ -9,7 +16,7 @@ async function request(path, options = {}) {
   } catch {
     body = text;
   }
-  return { status: res.status, body };
+  return { status: res.status, body: unwrap(body), raw: body };
 }
 
 function assert(condition, message) {
@@ -35,7 +42,7 @@ async function main() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username: 'admin', password: '123456' }),
   });
-  check(loginAdmin.status === 200 && loginAdmin.body.token, 'admin login failed');
+  check(loginAdmin.status === 200 && loginAdmin.body.token && loginAdmin.body.refreshToken, 'admin login failed');
   const adminToken = loginAdmin.body.token;
   const adminAuth = { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' };
 
@@ -166,7 +173,7 @@ async function main() {
     method: 'DELETE',
     headers: aliceAuth,
   });
-  check(deleteComment.status === 204, 'delete comment failed');
+  check(deleteComment.status === 200, 'delete comment failed');
 
   const invalidCover = await request('/api/posts', {
     method: 'POST',
@@ -212,7 +219,7 @@ async function main() {
     method: 'DELETE',
     headers: adminAuth,
   });
-  check(deleteNestedPost.status === 204, 'delete post with nested comments failed');
+  check(deleteNestedPost.status === 200, 'delete post with nested comments failed');
 
   const mine = await request('/api/posts/mine?page=1&pageSize=5', { headers: adminAuth });
   check(mine.status === 200 && Array.isArray(mine.body.items), 'mine posts failed');

@@ -14,9 +14,12 @@ public class AppDbContext : DbContext
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Tag> Tags => Set<Tag>();
     public DbSet<Comment> Comments => Set<Comment>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Post>()
+            .HasQueryFilter(p => !p.IsDeleted);
         modelBuilder.Entity<Post>()
             .HasOne(p => p.Author)
             .WithMany(u => u.Posts)
@@ -69,5 +72,14 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Post>()
             .HasIndex(p => p.CreatedAt);
+
+        modelBuilder.Entity<RefreshToken>()
+            .HasIndex(t => t.TokenHash);
+
+        modelBuilder.Entity<RefreshToken>()
+            .HasOne(t => t.User)
+            .WithMany()
+            .HasForeignKey(t => t.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

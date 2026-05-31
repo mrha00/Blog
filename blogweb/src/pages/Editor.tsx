@@ -14,6 +14,7 @@ import {
   resolveAssetUrl,
 } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { Category, Tag } from '../types';
 import {
   FileText,
@@ -33,6 +34,7 @@ import MarkdownRenderer from '../components/MarkdownRenderer';
 
 export default function Editor() {
   const { user } = useAuth();
+  const toast = useToast();
   const navigate = useNavigate();
   const { id: paramId } = useParams();
   const [searchParams] = useSearchParams();
@@ -108,7 +110,7 @@ export default function Editor() {
         setCategories(catsData);
         setTags(tagsData);
         setTitle(post.title || '');
-        setSummary(post.summary || post.excerpt || '');
+        setSummary(post.summary || '');
         setContent(post.content || '');
         setPostStatus(isDraftStatus(post.status) ? 'draft' : 'published');
 
@@ -128,7 +130,7 @@ export default function Editor() {
           );
         }
 
-        setCoverUrl(post.coverUrl || post.coverImage || post.cover || '');
+        setCoverUrl(post.coverUrl || '');
       } catch (err: unknown) {
         console.error('Fetch post detail failed:', err);
         setErrorStatus(getApiError(err, '无法加载文章详情'));
@@ -142,7 +144,7 @@ export default function Editor() {
   // Cover uploading controllers
   const handleUploadFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
-      alert('请仅上传图片文件');
+      toast.error('请仅上传图片文件');
       return;
     }
     

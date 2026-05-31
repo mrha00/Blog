@@ -14,10 +14,60 @@ export { isDraftStatus, normalizePostStatus, type PostWritePayload };
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:6133';
 
+export interface ApiResponse<T> {
+  code: number;
+  message: string;
+  data?: T;
+  errors?: { field: string; message: string }[];
+}
+
+function isApiEnvelope(payload: unknown): payload is ApiResponse<unknown> {
+  return (
+    !!payload &&
+    typeof payload === 'object' &&
+    'code' in payload &&
+    'message' in payload &&
+    'data' in payload
+  );
+}
+
+export function unwrapApiData<T>(payload: unknown): T {
+  if (isApiEnvelope(payload)) {
+    return payload.data as T;
+  }
+  return payload as T;
+}
+
 export const api = axios.create({
   baseURL: BASE_URL,
   timeout: 15000,
 });
+
+function persistAuthTokens(result: AuthResult) {
+  localStorage.setItem('token', result.token);
+  if (result.refreshToken) {
+    localStorage.setItem('refreshToken', result.refreshToken);
+  }
+}
+
+async function tryRefreshAccessToken(): Promise<string | null> {
+  const refreshToken = localStorage.getItem('refreshToken');
+  if (!refreshToken) {
+    return null;
+  }
+
+  try {
+    const res = await axios.post(`${BASE_URL}/api/auth/refresh`, { refreshToken });
+    const payload = unwrapApiData<AuthResult>(res.data);
+    persistAuthTokens(payload);
+    return payload.token;
+  } catch {
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    return null;
+  }
+}
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
@@ -28,12 +78,41 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-  (response) => response,
-  (error: AxiosError<{ error?: string; message?: string }>) => {
+  (response) => {
+    if (isApiEnvelope(response.data)) {
+      response.data = response.data.data;
+    }
+    return response;
+  },
+  (error: AxiosError<ApiResponse<unknown> & { error?: string }>) => {
+    const original = error.config;
+    const url = original?.url || '';
+    const isAuthRoute =
+      url.includes('/api/auth/login') ||
+      url.includes('/api/auth/register') ||
+      url.includes('/api/auth/refresh');
+
+    if (
+      error.response?.status === 401 &&
+      original &&
+      !isAuthRoute &&
+      !(original as { _retry?: boolean })._retry
+    ) {
+      (original as { _retry?: boolean })._retry = true;
+      return tryRefreshAccessToken().then((newToken) => {
+        if (newToken) {
+          original.headers.Authorization = `Bearer ${newToken}`;
+          return api(original);
+        }
+        throw error;
+      });
+    }
+
     if (error.response?.status === 401) {
       const path = window.location.pathname;
       if (!path.startsWith('/login') && !path.startsWith('/register')) {
         localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
         window.location.href = '/login';
       }
@@ -44,11 +123,13 @@ api.interceptors.response.use(
 
 export function getApiError(error: unknown, fallback = '请求失败'): string {
   if (axios.isAxiosError(error)) {
-    const data = error.response?.data as {
+    const data = error.response?.data as ApiResponse<unknown> & {
       error?: string;
-      message?: string;
       Message?: string;
     } | undefined;
+    if (data?.errors?.length) {
+      return data.errors.map((item) => item.message).join('；');
+    }
     return data?.message || data?.Message || data?.error || error.message || fallback;
   }
   if (error instanceof Error) {
@@ -59,6 +140,7 @@ export function getApiError(error: unknown, fallback = '请求失败'): string {
 
 export interface AuthResult {
   token: string;
+  refreshToken?: string;
   userId?: number;
   username: string;
   nickname?: string;
@@ -68,7 +150,9 @@ export interface AuthResult {
 
 export async function loginUser(username: string, password: string): Promise<AuthResult> {
   const res = await api.post<AuthResult>('/api/auth/login', { username, password });
-  return res.data;
+  const data = res.data;
+  persistAuthTokens(data);
+  return data;
 }
 
 export async function registerUser(
@@ -83,7 +167,9 @@ export async function registerUser(
     password,
     nickname,
   });
-  return res.data;
+  const data = res.data;
+  persistAuthTokens(data);
+  return data;
 }
 
 export async function getMe(): Promise<{
@@ -118,6 +204,21 @@ export async function changePassword(currentPassword: string, newPassword: strin
   await api.put('/api/auth/password', { currentPassword, newPassword });
 }
 
+export async function logoutSession(): Promise<void> {
+  const refreshToken = localStorage.getItem('refreshToken');
+  try {
+    if (refreshToken) {
+      await api.post('/api/auth/logout', { refreshToken });
+    }
+  } catch {
+    // ignore network errors during logout
+  } finally {
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+  }
+}
+
 export async function resolveSessionUser(token: string): Promise<User> {
   localStorage.setItem('token', token);
   const me = await getMe();
@@ -133,11 +234,12 @@ export async function resolveSessionUser(token: string): Promise<User> {
 
 export async function loginAndResolveUser(username: string, password: string): Promise<{
   token: string;
+  refreshToken?: string;
   user: User;
 }> {
   const res = await loginUser(username, password);
   const user = await resolveSessionUser(res.token);
-  return { token: res.token, user };
+  return { token: res.token, refreshToken: res.refreshToken, user };
 }
 
 export async function registerAndResolveUser(
@@ -145,10 +247,10 @@ export async function registerAndResolveUser(
   email: string,
   password: string,
   nickname: string
-): Promise<{ token: string; user: User }> {
+): Promise<{ token: string; refreshToken?: string; user: User }> {
   const res = await registerUser(username, email, password, nickname);
   const user = await resolveSessionUser(res.token);
-  return { token: res.token, user };
+  return { token: res.token, refreshToken: res.refreshToken, user };
 }
 
 export async function getPosts(filters: {
@@ -284,8 +386,8 @@ export async function uploadCover(file: File): Promise<string> {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 
-  const data = res.data as { data?: { url?: string }; url?: string };
-  const url = data?.data?.url || data?.url;
+  const data = res.data as { url?: string };
+  const url = data?.url;
   if (!url) {
     throw new Error('上传成功但未返回图片地址');
   }

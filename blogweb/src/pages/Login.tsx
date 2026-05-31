@@ -22,8 +22,8 @@ export default function Login() {
     setLoading(true);
     setErrorStatus(null);
     try {
-      const { token, user } = await loginAndResolveUser(username.trim(), password.trim());
-      login(token, user);
+      const { token, refreshToken, user } = await loginAndResolveUser(username.trim(), password.trim());
+      login(token, user, refreshToken);
       navigate('/');
     } catch (err: any) {
       console.error('Login error:', err);

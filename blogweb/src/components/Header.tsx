@@ -11,8 +11,8 @@ export default function Header() {
   const location = useLocation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     setDropdownOpen(false);
     navigate('/');
   };

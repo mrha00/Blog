@@ -8,8 +8,9 @@ import {
   uploadCover,
 } from '../api';
 import UserAvatar from '../components/UserAvatar';
+import PasswordField from '../components/PasswordField';
 import { getDisplayName } from '../utils/displayName';
-import { AlertCircle, ArrowLeft, Camera, CheckCircle2, Lock, User as UserIcon } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Camera, CheckCircle2, User as UserIcon } from 'lucide-react';
 
 export default function Profile() {
   const { user, updateUser } = useAuth();
@@ -55,24 +56,6 @@ export default function Profile() {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-    }
-  };
-
-  const handleRemoveAvatar = async () => {
-    setAvatarUploading(true);
-    setProfileError(null);
-    try {
-      setAvatarUrl('');
-      const updated = await updateProfile({ avatarUrl: '' });
-      updateUser({
-        nickname: updated.nickname,
-        avatarUrl: updated.avatarUrl,
-      });
-      setProfileMessage('头像已移除');
-    } catch (err) {
-      setProfileError(getApiError(err, '移除头像失败'));
-    } finally {
-      setAvatarUploading(false);
     }
   };
 
@@ -165,16 +148,6 @@ export default function Profile() {
                   <Camera className="w-4 h-4" />
                   {avatarUploading ? '上传中…' : '更换头像'}
                 </button>
-                {avatarUrl && (
-                  <button
-                    type="button"
-                    disabled={avatarUploading}
-                    onClick={handleRemoveAvatar}
-                    className="text-sm text-gray-600 hover:text-red-600 border border-gray-200 hover:border-red-200 px-4 py-2 rounded-lg font-medium cursor-pointer"
-                  >
-                    移除
-                  </button>
-                )}
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -232,46 +205,40 @@ export default function Profile() {
           </form>
 
           <form onSubmit={handlePasswordSubmit} className="space-y-4 border-t border-gray-100 pt-6">
-            <h2 className="text-sm font-semibold text-gray-800">修改密码</h2>
             <div>
-              <label htmlFor="current-password" className="block text-xs font-medium text-gray-600 mb-1.5">
-                当前密码
-              </label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  id="current-password"
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full text-sm border border-gray-200 rounded-lg pl-9 pr-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
-                />
-              </div>
+              <h2 className="text-sm font-semibold text-gray-800">修改密码</h2>
+              <p className="text-xs text-gray-500 mt-1">
+                修改后需使用新密码重新登录。新密码至少 6 个字符，且不能与当前密码相同。
+              </p>
             </div>
-            <div>
-              <label htmlFor="new-password" className="block text-xs font-medium text-gray-600 mb-1.5">
-                新密码
-              </label>
-              <input
-                id="new-password"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label htmlFor="confirm-password" className="block text-xs font-medium text-gray-600 mb-1.5">
-                确认新密码
-              </label>
-              <input
-                id="confirm-password"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
-              />
-            </div>
+
+            <PasswordField
+              id="current-password"
+              label="当前密码"
+              value={currentPassword}
+              onChange={setCurrentPassword}
+              placeholder="请输入当前登录密码"
+              autoComplete="current-password"
+              disabled={passwordSaving}
+            />
+            <PasswordField
+              id="new-password"
+              label="新密码"
+              value={newPassword}
+              onChange={setNewPassword}
+              placeholder="至少 6 个字符"
+              autoComplete="new-password"
+              disabled={passwordSaving}
+            />
+            <PasswordField
+              id="confirm-password"
+              label="确认新密码"
+              value={confirmPassword}
+              onChange={setConfirmPassword}
+              placeholder="再次输入新密码"
+              autoComplete="new-password"
+              disabled={passwordSaving}
+            />
 
             {passwordError && (
               <div className="flex items-start gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
@@ -289,7 +256,7 @@ export default function Profile() {
             <button
               type="submit"
               disabled={passwordSaving}
-              className="bg-gray-900 hover:bg-black disabled:opacity-60 text-white text-sm font-semibold px-5 py-2.5 rounded-lg cursor-pointer"
+              className="bg-blue-700 hover:bg-blue-800 disabled:opacity-60 text-white text-sm font-semibold px-5 py-2.5 rounded-lg cursor-pointer"
             >
               {passwordSaving ? '提交中…' : '更新密码'}
             </button>

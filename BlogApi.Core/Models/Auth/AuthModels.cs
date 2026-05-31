@@ -6,11 +6,14 @@ public record LoginRequest(string Username, string Password);
 
 public record AuthTokenResult(
     string Token,
+    string RefreshToken,
     int UserId,
     string Username,
     string Nickname,
     string Role,
     string? AvatarUrl);
+
+public record RefreshTokenRequest(string RefreshToken);
 
 public record UserProfile(
     int UserId,

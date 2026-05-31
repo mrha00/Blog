@@ -56,13 +56,13 @@ export default function Register() {
 
     setLoading(true);
     try {
-      const { token, user } = await registerAndResolveUser(
+      const { token, refreshToken, user } = await registerAndResolveUser(
         username.trim(),
         email.trim(),
         password,
         nickname.trim()
       );
-      login(token, user);
+      login(token, user, refreshToken);
       navigate('/');
     } catch (err: any) {
       console.error('Registration processing failed:', err);

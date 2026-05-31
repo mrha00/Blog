@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using BlogApi.Core.Configuration;
 using BlogApi.Core.Constants;
@@ -16,15 +17,18 @@ namespace BlogApi.Services.Services;
 public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
+    private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly IFileStorageService _fileStorageService;
     private readonly JwtSettings _jwtSettings;
 
     public AuthService(
         IUserRepository userRepository,
+        IRefreshTokenRepository refreshTokenRepository,
         IFileStorageService fileStorageService,
         IOptions<JwtSettings> jwtSettings)
     {
         _userRepository = userRepository;
+        _refreshTokenRepository = refreshTokenRepository;
         _fileStorageService = fileStorageService;
         _jwtSettings = jwtSettings.Value;
     }
@@ -58,7 +62,7 @@ public class AuthService : IAuthService
         };
 
         user = await _userRepository.AddAsync(user);
-        return CreateTokenResult(user);
+        return await CreateTokenResultAsync(user);
     }
 
     public async Task<AuthTokenResult> LoginAsync(LoginRequest request)
@@ -69,7 +73,40 @@ public class AuthService : IAuthService
             throw new UnauthorizedAccessException("用户名或密码错误");
         }
 
-        return CreateTokenResult(user);
+        return await CreateTokenResultAsync(user);
+    }
+
+    public async Task<AuthTokenResult> RefreshAsync(string refreshToken)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken))
+        {
+            throw new UnauthorizedAccessException("Refresh Token 无效");
+        }
+
+        var hash = HashToken(refreshToken.Trim());
+        var stored = await _refreshTokenRepository.GetActiveByHashAsync(hash);
+        if (stored?.User is null)
+        {
+            throw new UnauthorizedAccessException("Refresh Token 已失效，请重新登录");
+        }
+
+        await _refreshTokenRepository.RevokeAsync(stored);
+        return await CreateTokenResultAsync(stored.User);
+    }
+
+    public async Task RevokeRefreshTokenAsync(string refreshToken)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken))
+        {
+            return;
+        }
+
+        var hash = HashToken(refreshToken.Trim());
+        var stored = await _refreshTokenRepository.GetActiveByHashAsync(hash);
+        if (stored is not null)
+        {
+            await _refreshTokenRepository.RevokeAsync(stored);
+        }
     }
 
     public async Task<UserProfile> GetProfileAsync(int userId)
@@ -147,13 +184,26 @@ public class AuthService : IAuthService
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
         await _userRepository.UpdateAsync(user);
+        await _refreshTokenRepository.RevokeAllForUserAsync(userId);
     }
 
-    private AuthTokenResult CreateTokenResult(User user)
+    private async Task<AuthTokenResult> CreateTokenResultAsync(User user)
     {
-        var token = GenerateToken(user);
+        var accessToken = GenerateAccessToken(user);
+        var refreshToken = GenerateRefreshToken();
+        var hash = HashToken(refreshToken);
+
+        await _refreshTokenRepository.AddAsync(new RefreshToken
+        {
+            TokenHash = hash,
+            UserId = user.Id,
+            ExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.RefreshExpireDays),
+            CreatedAt = DateTime.UtcNow
+        });
+
         return new AuthTokenResult(
-            token,
+            accessToken,
+            refreshToken,
             user.Id,
             user.Username,
             user.Nickname,
@@ -173,7 +223,7 @@ public class AuthService : IAuthService
             user.CreatedAt);
     }
 
-    private string GenerateToken(User user)
+    private string GenerateAccessToken(User user)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -194,5 +244,17 @@ public class AuthService : IAuthService
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    private static string GenerateRefreshToken()
+    {
+        var bytes = RandomNumberGenerator.GetBytes(64);
+        return Convert.ToBase64String(bytes);
+    }
+
+    private static string HashToken(string token)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(token));
+        return Convert.ToHexString(hash);
     }
 }

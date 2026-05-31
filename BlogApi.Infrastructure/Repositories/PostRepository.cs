@@ -144,18 +144,9 @@ public class PostRepository : IPostRepository
 
     public async Task DeleteAsync(Post post)
     {
-        // ParentId FK is Restrict — break the tree, then remove all comments for this post.
-        await _db.Comments
-            .IgnoreQueryFilters()
-            .Where(c => c.PostId == post.Id)
-            .ExecuteUpdateAsync(s => s.SetProperty(c => c.ParentId, (int?)null));
-
-        await _db.Comments
-            .IgnoreQueryFilters()
-            .Where(c => c.PostId == post.Id)
-            .ExecuteDeleteAsync();
-
-        _db.Posts.Remove(post);
+        post.IsDeleted = true;
+        post.DeletedAt = DateTime.UtcNow;
+        post.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
     }
 

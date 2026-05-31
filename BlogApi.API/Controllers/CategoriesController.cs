@@ -1,3 +1,4 @@
+using BlogApi.API.Common;
 using BlogApi.API.DTOs.Categories;
 using BlogApi.Core.Constants;
 using BlogApi.Core.Interfaces;
@@ -19,36 +20,36 @@ public class CategoriesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<CategoryDto>>> GetCategories()
+    public async Task<ActionResult<ApiResponse<List<CategoryDto>>>> GetCategories()
     {
         var items = await _categoryService.GetAllAsync();
-        return Ok(items.Select(MapToDto).ToList());
+        return Ok(ApiResponse<List<CategoryDto>>.Success(items.Select(MapToDto).ToList()));
     }
 
     [Authorize(Roles = Roles.Admin)]
     [HttpPost]
-    public async Task<ActionResult<CategoryDto>> CreateCategory(CreateCategoryDto dto)
+    public async Task<ActionResult<ApiResponse<CategoryDto>>> CreateCategory(CreateCategoryDto dto)
     {
         var item = await _categoryService.CreateAsync(
             new CreateCategoryRequest(dto.Name, dto.Description));
-        return CreatedAtAction(nameof(GetCategories), new { id = item.Id }, MapToDto(item));
+        return Ok(ApiResponse<CategoryDto>.Success(MapToDto(item), "分类已创建"));
     }
 
     [Authorize(Roles = Roles.Admin)]
     [HttpPut("{id:int}")]
-    public async Task<ActionResult<CategoryDto>> UpdateCategory(int id, UpdateCategoryDto dto)
+    public async Task<ActionResult<ApiResponse<CategoryDto>>> UpdateCategory(int id, UpdateCategoryDto dto)
     {
         var item = await _categoryService.UpdateAsync(
             id, new UpdateCategoryRequest(dto.Name, dto.Description));
-        return Ok(MapToDto(item));
+        return Ok(ApiResponse<CategoryDto>.Success(MapToDto(item), "分类已更新"));
     }
 
     [Authorize(Roles = Roles.Admin)]
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> DeleteCategory(int id)
+    public async Task<ActionResult<ApiResponse<object>>> DeleteCategory(int id)
     {
         await _categoryService.DeleteAsync(id);
-        return NoContent();
+        return Ok(ApiResponse<object>.Success(null!, "分类已删除"));
     }
 
     private static CategoryDto MapToDto(CategoryItem item)

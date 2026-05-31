@@ -9,7 +9,7 @@ import {
 describe('normalizeComment', () => {
   it('maps userName from BlogApi', () => {
     const c = normalizeComment({ id: 1, content: 'hi', userName: 'alice' });
-    expect(c.username).toBe('alice');
+    expect(c.userName).toBe('alice');
     expect(getCommentAuthorName(c)).toBe('alice');
   });
 });

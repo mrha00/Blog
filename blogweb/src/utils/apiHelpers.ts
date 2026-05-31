@@ -21,7 +21,7 @@ function toStoredCoverUrl(url?: string): string | undefined {
 }
 
 export function toWritePayload(postData: Partial<Post>): PostWritePayload {
-  const categoryId = postData.categoryId ?? postData.category_id;
+  const categoryId = postData.categoryId;
   if (categoryId === undefined || categoryId === null || Number(categoryId) <= 0) {
     throw new Error('请选择文章分类');
   }
@@ -31,26 +31,23 @@ export function toWritePayload(postData: Partial<Post>): PostWritePayload {
     content: (postData.content || '').trim(),
     summary: postData.summary?.trim() || undefined,
     categoryId: Number(categoryId),
-    tagIds: postData.tagIds || postData.tag_ids || [],
-    coverUrl: toStoredCoverUrl(
-      postData.coverUrl || postData.coverImage || postData.cover || undefined
-    ),
+    tagIds: postData.tagIds || [],
+    coverUrl: toStoredCoverUrl(postData.coverUrl),
   };
 }
 
 export function normalizePost(raw: Post): Post {
-  const viewCount =
-    raw.views ?? (raw as Post & { viewCount?: number }).viewCount ?? raw.readCount;
+  const viewCount = raw.views ?? raw.viewCount ?? raw.readCount;
 
   return {
     ...raw,
     status: normalizePostStatus(raw.status),
-    coverUrl: raw.coverUrl || raw.coverImage || raw.cover,
+    coverUrl: raw.coverUrl,
     authorName:
       raw.authorName ||
       (typeof raw.author === 'string' ? raw.author : undefined) ||
       (typeof raw.author === 'object' && raw.author ? raw.author.username : undefined),
-    authorId: raw.authorId ?? raw.author_id,
+    authorId: raw.authorId,
     categoryName:
       raw.categoryName ||
       (typeof raw.category === 'string'
@@ -75,7 +72,7 @@ export function canUserManagePost(
 ): boolean {
   if (!userId) return false;
   if (isAdmin) return true;
-  const authorId = post.authorId ?? post.author_id;
+  const authorId = post.authorId;
   return authorId !== undefined && authorId > 0 && authorId === userId;
 }
 

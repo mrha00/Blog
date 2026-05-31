@@ -118,9 +118,7 @@ public class PostService : IPostService
             ?? throw new NotFoundException("文章不存在");
 
         EnsureAuthorOrAdmin(post.AuthorId, userId, isAdmin);
-        var coverUrl = post.CoverUrl;
         await _postRepository.DeleteAsync(post);
-        _fileStorageService.TryDeleteUpload(coverUrl);
         await _postCacheService.InvalidateAsync(id);
         await _postListCacheService.InvalidateAsync();
     }

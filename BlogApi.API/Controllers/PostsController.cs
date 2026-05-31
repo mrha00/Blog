@@ -1,4 +1,4 @@
-using System.Security.Claims;
+using BlogApi.API.Common;
 using BlogApi.API.DTOs.Comments;
 using BlogApi.API.DTOs.Posts;
 using BlogApi.Core.Common;
@@ -8,6 +8,7 @@ using BlogApi.Core.Models.Comments;
 using BlogApi.Core.Models.Posts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace BlogApi.API.Controllers;
 
@@ -25,7 +26,7 @@ public class PostsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<PagedResult<PostListDto>>> GetPosts([FromQuery] PostQueryDto query)
+    public async Task<ActionResult<ApiResponse<PagedResult<PostListDto>>>> GetPosts([FromQuery] PostQueryDto query)
     {
         var result = await _postService.GetPostsAsync(new PostQuery(
             query.Keyword,
@@ -36,16 +37,16 @@ public class PostsController : ControllerBase
             query.SortBy,
             query.Descending));
 
-        return Ok(new PagedResult<PostListDto>(
+        return Ok(ApiResponse<PagedResult<PostListDto>>.Success(new PagedResult<PostListDto>(
             result.Items.Select(MapToListDto).ToList(),
             result.TotalCount,
             result.Page,
-            result.PageSize));
+            result.PageSize)));
     }
 
     [Authorize]
     [HttpGet("mine")]
-    public async Task<ActionResult<PagedResult<PostListDto>>> GetMyPosts([FromQuery] PostQueryDto query)
+    public async Task<ActionResult<ApiResponse<PagedResult<PostListDto>>>> GetMyPosts([FromQuery] PostQueryDto query)
     {
         var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         var result = await _postService.GetMyPostsAsync(userId, new PostQuery(
@@ -58,15 +59,15 @@ public class PostsController : ControllerBase
             query.Descending,
             userId));
 
-        return Ok(new PagedResult<PostListDto>(
+        return Ok(ApiResponse<PagedResult<PostListDto>>.Success(new PagedResult<PostListDto>(
             result.Items.Select(MapToListDto).ToList(),
             result.TotalCount,
             result.Page,
-            result.PageSize));
+            result.PageSize)));
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<PostDetailDto>> GetPost(int id)
+    public async Task<ActionResult<ApiResponse<PostDetailDto>>> GetPost(int id)
     {
         int? userId = null;
         var isAdmin = false;
@@ -79,75 +80,75 @@ public class PostsController : ControllerBase
 
         var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         var item = await _postService.GetByIdAsync(id, userId, isAdmin, clientIp);
-        return Ok(MapToDetailDto(item));
+        return Ok(ApiResponse<PostDetailDto>.Success(MapToDetailDto(item)));
     }
 
     [HttpGet("{postId:int}/comments")]
-    public async Task<ActionResult<List<CommentDto>>> GetComments(int postId)
+    public async Task<ActionResult<ApiResponse<List<CommentDto>>>> GetComments(int postId)
     {
         var items = await _commentService.GetByPostIdAsync(postId);
-        return Ok(items.Select(MapToCommentDto).ToList());
+        return Ok(ApiResponse<List<CommentDto>>.Success(items.Select(MapToCommentDto).ToList()));
     }
 
     [Authorize]
     [HttpPost("{postId:int}/comments")]
-    public async Task<ActionResult<CommentDto>> CreateComment(int postId, CreateCommentDto dto)
+    public async Task<ActionResult<ApiResponse<CommentDto>>> CreateComment(int postId, CreateCommentDto dto)
     {
         var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         var item = await _commentService.CreateAsync(
             postId,
             new CreateCommentRequest(dto.Content, dto.ParentId),
             userId);
-        return CreatedAtAction(nameof(GetComments), new { postId }, MapToCommentDto(item));
+        return Ok(ApiResponse<CommentDto>.Success(MapToCommentDto(item), "评论已发表"));
     }
 
     [Authorize]
     [HttpPost]
-    public async Task<ActionResult<PostDetailDto>> CreatePost(CreatePostDto dto)
+    public async Task<ActionResult<ApiResponse<PostDetailDto>>> CreatePost(CreatePostDto dto)
     {
         var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         var item = await _postService.CreateAsync(MapToCreateRequest(dto), userId);
-        return CreatedAtAction(nameof(GetPost), new { id = item.Id }, MapToDetailDto(item));
+        return Ok(ApiResponse<PostDetailDto>.Success(MapToDetailDto(item), "文章已创建"));
     }
 
     [Authorize]
     [HttpPut("{id:int}")]
-    public async Task<ActionResult<PostDetailDto>> UpdatePost(int id, UpdatePostDto dto)
+    public async Task<ActionResult<ApiResponse<PostDetailDto>>> UpdatePost(int id, UpdatePostDto dto)
     {
         var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         var isAdmin = User.IsInRole(Roles.Admin);
         var item = await _postService.UpdateAsync(id, MapToUpdateRequest(dto), userId, isAdmin);
-        return Ok(MapToDetailDto(item));
+        return Ok(ApiResponse<PostDetailDto>.Success(MapToDetailDto(item), "文章已更新"));
     }
 
     [Authorize]
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> DeletePost(int id)
+    public async Task<ActionResult<ApiResponse<object>>> DeletePost(int id)
     {
         var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         var isAdmin = User.IsInRole(Roles.Admin);
         await _postService.DeleteAsync(id, userId, isAdmin);
-        return NoContent();
+        return Ok(ApiResponse<object>.Success(null!, "文章已删除"));
     }
 
     [Authorize]
     [HttpPost("{id:int}/publish")]
-    public async Task<ActionResult<PostDetailDto>> PublishPost(int id)
+    public async Task<ActionResult<ApiResponse<PostDetailDto>>> PublishPost(int id)
     {
         var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         var isAdmin = User.IsInRole(Roles.Admin);
         var item = await _postService.PublishAsync(id, userId, isAdmin);
-        return Ok(MapToDetailDto(item));
+        return Ok(ApiResponse<PostDetailDto>.Success(MapToDetailDto(item), "文章已发布"));
     }
 
     [Authorize]
     [HttpPost("{id:int}/draft")]
-    public async Task<ActionResult<PostDetailDto>> RevertToDraft(int id)
+    public async Task<ActionResult<ApiResponse<PostDetailDto>>> RevertToDraft(int id)
     {
         var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         var isAdmin = User.IsInRole(Roles.Admin);
         var item = await _postService.RevertToDraftAsync(id, userId, isAdmin);
-        return Ok(MapToDetailDto(item));
+        return Ok(ApiResponse<PostDetailDto>.Success(MapToDetailDto(item), "文章已转为草稿"));
     }
 
     private static CreatePostRequest MapToCreateRequest(CreatePostDto dto)
