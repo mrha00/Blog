@@ -1,16 +1,29 @@
--- BlogApi 本地测试数据（直接写入 blog.db，不经过代码种子）
--- 执行方式见 Scripts/README.md
--- 密码 Admin123! 的 BCrypt 哈希（与 AuthService 校验方式一致）
+-- BlogApi 演示账号（直接写入 blog.db）
+-- 执行：dotnet run --project Scripts/DbExec -- BlogApi.API/blog.db Scripts/seed-test-data.sql
+-- 统一密码：123456
 
-DELETE FROM Users WHERE Username = 'admin';
+DELETE FROM Users WHERE Username IN ('admin', 'alice', 'bob');
 
 INSERT INTO Users (Username, Email, PasswordHash, Role, CreatedAt)
-VALUES (
+VALUES
+(
     'admin',
     'admin@blog.local',
-    '$2a$11$RhrTiMsoeHG0DsWEn2mt8eUQgDSADjfdq0zXaDz0Qgnz6UEnhYS7u',
+    '$2a$11$L.vSYr5k3GDmSXgPc/xcHOl8cgBcovdeGavg29YkX93d5wQukyNHa',
     'Admin',
     datetime('now')
+),
+(
+    'alice',
+    'alice@blog.local',
+    '$2a$11$L.vSYr5k3GDmSXgPc/xcHOl8cgBcovdeGavg29YkX93d5wQukyNHa',
+    'User',
+    datetime('now')
+),
+(
+    'bob',
+    'bob@blog.local',
+    '$2a$11$L.vSYr5k3GDmSXgPc/xcHOl8cgBcovdeGavg29YkX93d5wQukyNHa',
+    'User',
+    datetime('now')
 );
-
--- 后续测试数据在此文件末尾追加，例如分类、标签、文章等

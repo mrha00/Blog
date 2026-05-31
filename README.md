@@ -57,7 +57,9 @@ dotnet run --project Scripts/DbExec -- BlogApi.API/blog.db Scripts/seed-test-dat
 
 | 演示账号 | 密码 | 角色 |
 |---------|------|------|
-| admin | Admin123! | Admin |
+| admin | 123456 | Admin |
+| alice | 123456 | User |
+| bob | 123456 | User |
 
 也可通过 `POST /api/auth/register` 注册普通用户。
 
