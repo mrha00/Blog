@@ -1,23 +1,44 @@
-# Blog — 全栈博客项目
+# Blog — 全栈博客系统
 
-> ASP.NET Core 8 后端 + React 前端，JWT 认证、文章/分类/标签/嵌套评论、封面上传、Redis 缓存与完整测试体系。
+[![.NET](https://img.shields.io/badge/.NET-8-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 **仓库**：[github.com/mrha00/Blog](https://github.com/mrha00/Blog)
+
+## 项目简介
+
+Blog 是一个**前后端分离的全栈博客平台**，覆盖读者浏览、作者创作、管理员运维三类角色。用户可注册登录、发布 Markdown 文章、上传封面、管理草稿，并在文章下进行嵌套评论；管理员可维护分类与标签。
+
+后端采用 **ASP.NET Core 8 四层架构**（API → Services → Infrastructure → Core），前端为 **React + Vite SPA**（`blogweb/`），通过 JWT 与 REST API 联调。项目包含单元测试、API 集成脚本、Playwright E2E 与后端 xUnit，适合作为**全栈工程化实践**的面试展示项目。
+
+| | |
+|---|---|
+| **前端** | http://localhost:3000（`blogweb/`） |
+| **API / Swagger** | http://localhost:6133/swagger |
+| **演示账号** | `admin` / `alice` / `bob`，密码均为 `123456` |
 
 ## 仓库结构
 
 | 目录 | 说明 |
 |------|------|
 | `BlogApi.*` | 后端 REST API（四层架构） |
-| `blogweb/` | 前端 SPA（React + Vite） |
+| `blogweb/` | 前端 SPA（React + Vite + Tailwind） |
 | `Scripts/` | 数据库脚本与工具 |
+
+## 核心功能
+
+**读者侧**：首页搜索 / 分类 / 标签筛选、文章详情、阅读量、嵌套评论  
+**作者侧**：编辑器、封面图上传、草稿 / 发布、我的草稿列表、个人资料（头像 / 昵称 / 改密）  
+**管理侧**：分类 CRUD、标签增删改（Admin）  
+**工程能力**：JWT 鉴权、统一异常与校验、Redis 详情缓存与阅读去重、Docker 部署
 
 ## 项目亮点
 
 - **全栈闭环**：注册/登录 → 写文章 → 发布 → 评论回复 → 管理分类标签
-- **分层后端**：API → Services → Infrastructure → Core
-- **工程化**：统一异常处理、CoverUrl 校验、删文级联评论、分页筛选
-- **测试**：Vitest 单元 + API 集成 + Playwright E2E（见 `blogweb/package.json`）
+- **分层后端**：Controller 仅编排，业务在 Service，数据访问在 Repository
+- **工程化细节**：CoverUrl 白名单、删文级联评论、分页筛选、列表缓存
+- **测试体系**：Vitest 单元 + Node 集成脚本 + Playwright E2E + xUnit
 - **可部署**：Docker Compose（API + Redis），SQLite 持久化
 
 ## 技术栈
@@ -95,12 +116,12 @@ dotnet test BlogApi.API.Tests/BlogApi.API.Tests.csproj
 
 | 模块 | 路径 | 说明 |
 |------|------|------|
-| 认证 | `/api/auth` | 注册、登录、当前用户 |
+| 认证 | `/api/auth` | 注册、登录、个人资料、改密 |
 | 文章 | `/api/posts` | CRUD、发布/草稿、我的草稿 `/mine` |
 | 分类 | `/api/categories` | 列表；管理需 Admin |
-| 标签 | `/api/tags` | 列表/删除；创建需 Admin |
+| 标签 | `/api/tags` | 列表/增删改；管理需 Admin |
 | 评论 | `/api/posts/{id}/comments` | 发表、嵌套回复 |
-| 上传 | `/api/upload` | 封面（jpg/png，≤5MB，仅存 `/uploads/`） |
+| 上传 | `/api/upload` | 封面/头像（jpg/png，≤5MB，仅存 `/uploads/`） |
 
 **CORS**：`appsettings.Development.example.json` 已包含 `http://localhost:3000`。
 

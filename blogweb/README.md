@@ -1,6 +1,12 @@
-# BlogWeb
+# BlogWeb — 博客前端
 
-React 博客前端，对接同仓库 [BlogApi](../README.md) REST API。
+React 单页应用，与同仓库 [BlogApi](../README.md) REST API 联调，实现 Blog 全栈项目的用户界面层。
+
+## 项目简介
+
+BlogWeb 面向三类用户：**读者**浏览与评论、**作者**写作与资料管理、**管理员**维护分类标签。页面采用 React Router 路由守卫（登录 / Admin），Axios 统一携带 JWT，并对 API 分页、枚举状态、嵌套评论等做了适配层封装。
+
+技术选型侧重**可维护与可测试**：TypeScript 类型约束、Vitest 单元测试、Playwright E2E 覆盖主链路，配合 `scripts/integration-test.mjs` 做 API 契约回归。
 
 ## 技术栈
 
@@ -8,12 +14,13 @@ React 博客前端，对接同仓库 [BlogApi](../README.md) REST API。
 
 ## 功能概览
 
-- 首页：分类/标签筛选、搜索、文章列表
-- 文章：详情、Markdown 渲染、浏览量、草稿/发布状态
-- 评论：嵌套回复、作者/管理员删除
-- 作者：编辑器、封面上传、发布/下架
-- 管理：分类/标签 CRUD（Admin）
-- 认证：注册（昵称）、登录、JWT 会话
+- **首页**：分类/标签筛选、搜索、分页、「我的草稿」Tab
+- **文章**：详情、Markdown 渲染、浏览量、草稿/发布状态
+- **评论**：嵌套回复、作者头像、作者/管理员删除
+- **作者**：编辑器、封面上传、发布/下架
+- **个人资料**：头像、昵称、修改密码（`/profile`）
+- **管理**：分类/标签 CRUD（Admin）
+- **认证**：注册（昵称）、登录、JWT 会话
 
 ## 快速开始
 
