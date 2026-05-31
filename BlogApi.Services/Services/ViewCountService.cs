@@ -14,13 +14,13 @@ public class ViewCountService
         _postRepository = postRepository;
     }
 
-    public async Task IncrementViewCountAsync(int postId, string clientIp)
+    public async Task<bool> TryIncrementViewCountAsync(int postId, string clientIp)
     {
         var cacheKey = $"view:{postId}:{clientIp}";
         var existing = await _cache.GetStringAsync(cacheKey);
         if (existing is not null)
         {
-            return;
+            return false;
         }
 
         await _cache.SetStringAsync(
@@ -32,5 +32,6 @@ public class ViewCountService
             });
 
         await _postRepository.IncrementViewCountAsync(postId);
+        return true;
     }
 }

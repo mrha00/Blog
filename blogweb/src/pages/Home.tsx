@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { getPosts, getMyPosts, getCategories, getTags, isDraftStatus, resolveAssetUrl } from '../api';
+import { getPosts, getMyPosts, getCategories, getTags } from '../api';
 import { Post, Category, Tag } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { formatAuthorMeta } from '../utils/displayName';
 import {
   filterBrowseCategories,
   filterBrowseTags,
   sortBrowseCategories,
   getCategoryAccent,
 } from '../utils/catalogFilters';
-import { Search, Calendar, Eye, Hash, LayoutGrid, FolderOpen, AlertCircle, PlusCircle, RefreshCw, FileText } from 'lucide-react';
+import { Search, Hash, LayoutGrid, FolderOpen, AlertCircle, PlusCircle, RefreshCw, FileText } from 'lucide-react';
+import PostCard from '../components/PostCard';
 
 export default function Home() {
   const { user } = useAuth();
@@ -28,7 +28,6 @@ export default function Home() {
   const page = Number(searchParams.get('page')) || 1;
 
   const [searchInput, setSearchInput] = useState(searchWord);
-  const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [errorStatus, setErrorStatus] = useState<string | null>(null);
@@ -72,7 +71,6 @@ export default function Home() {
             : {}),
         });
         setPosts(res.list);
-        setTotal(res.total);
         setTotalPages(res.totalPages);
       } catch (err: any) {
         console.error('Fetch post error:', err);
@@ -369,14 +367,6 @@ export default function Home() {
         /* Posts Listing */
         <div className="flex flex-col gap-6">
           {posts.map((post) => {
-            const dateStr = post.createdAt || '';
-            const formattedDate = dateStr
-              ? new Date(dateStr).toISOString().split('T')[0]
-              : '最近更新';
-
-            const coverUrl = resolveAssetUrl(post.coverUrl);
-
-            // Extract category string
             const categoryName =
               typeof post.category === 'object' && post.category
                 ? post.category.name
@@ -384,69 +374,8 @@ export default function Home() {
                 ? post.category
                 : categories.find((c) => c.id === post.categoryId)?.name;
 
-            // Check if published state
-            const isDraft = isDraftStatus(post.status);
-
             return (
-              <article
-                key={post.id}
-                id={`article-card-${post.id}`}
-                className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:translate-y-[-2px] hover:shadow-md transition-all duration-300 flex flex-col md:flex-row gap-6 items-start"
-              >
-                {/* Text Content Block */}
-                <div className="flex-1 flex flex-col justify-between self-stretch">
-                  <div>
-                    {/* Header: Category and Draft status */}
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <span className="text-xs font-bold text-blue-700 uppercase tracking-widest bg-blue-50 px-2.5 py-1 rounded">
-                        {categoryName || '其它杂谈'}
-                      </span>
-                      {isDraft && (
-                        <span className="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                          草稿
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Title */}
-                    <h2 className="text-lg md:text-xl font-bold text-gray-900 tracking-tight hover:text-blue-700 transition-colors mb-2">
-                      <Link to={`/posts/${post.id}`}>{post.title}</Link>
-                    </h2>
-
-                    {/* Excerpt Summary */}
-                    <p className="text-gray-500 font-sans text-sm line-clamp-3 mb-4 leading-relaxed">
-                      {post.summary || post.content?.replace(/[#*`>_\-]/g, '').slice(0, 140) || '点击阅读全文...'}
-                    </p>
-                  </div>
-
-                  {/* Metadata Row */}
-                  <div className="flex flex-wrap items-center text-xs text-gray-500 gap-y-2 gap-x-4 border-t border-gray-100 pt-4 mt-auto">
-                    <span className="text-gray-600">{formatAuthorMeta(post)}</span>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                      <span>{formattedDate}</span>
-                    </div>
-                    {(post.views !== undefined || post.readCount !== undefined) && (
-                      <div className="flex items-center gap-1">
-                        <Eye className="w-3.5 h-3.5 text-gray-400" />
-                        <span>{post.views !== undefined ? post.views : post.readCount} 次阅读</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Article Cover Image Thumbnail */}
-                {coverUrl && (
-                  <div className="w-full md:w-40 h-28 rounded-xl overflow-hidden bg-gray-50 border border-gray-150 flex-shrink-0 self-center">
-                    <img
-                      src={coverUrl}
-                      alt={post.title}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-                )}
-              </article>
+              <PostCard key={post.id} post={post} categoryName={categoryName} />
             );
           })}
         </div>

@@ -186,9 +186,8 @@ public class PostService : IPostService
             EnsureAuthorOrAdmin(item.AuthorId, userId.Value, isAdmin);
         }
 
-        await _viewCountService.IncrementViewCountAsync(id, clientIp);
-
-        var viewCount = await _postRepository.GetViewCountAsync(id) ?? item.ViewCount;
+        var incremented = await _viewCountService.TryIncrementViewCountAsync(id, clientIp);
+        var viewCount = incremented ? item.ViewCount + 1 : item.ViewCount;
         return item with { ViewCount = viewCount };
     }
 

@@ -78,7 +78,7 @@ export default function Categories() {
   };
 
   const handleDeleteClick = async (id: number) => {
-    if (!window.confirm('您确定要删除此分类吗？关联的文章可能会变为未分类。')) return;
+    if (!window.confirm('您确定要删除此分类吗？若分类下仍有文章，系统将拒绝删除。')) return;
     try {
       await deleteCategory(id);
       setCategories(categories.filter((c) => c.id !== id));
