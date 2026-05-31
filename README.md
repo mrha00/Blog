@@ -96,17 +96,6 @@ dotnet run --project BlogApi.API
 .\Scripts\run-phase6-tests.ps1   # 阶段六（上传、浏览量、缓存）
 ```
 
-## 不会提交到仓库的内容
-
-- `blog.db` 及 SQLite 临时文件
-- `BlogApi.API/appsettings.Development.json`（含 JWT 密钥）
-- `wwwroot/uploads/` 下用户上传文件
-- `bin/`、`obj/` 构建产物
-
-## 开发进度
-
-当前实现至 **阶段六**（上传、ViewCount、详情缓存）。Docker 与完整回归见本地 `task/` 文档（未纳入本仓库）。
-
 ## License
 
 MIT（可按需修改）
