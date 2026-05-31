@@ -1,59 +1,68 @@
-# BlogApi
+# Blog — 全栈博客项目
 
-> 基于 ASP.NET Core 8 的博客 REST API，采用四层架构，涵盖 JWT 认证、内容管理、评论、文件上传与 Redis 缓存。
+> ASP.NET Core 8 后端 + React 前端，JWT 认证、文章/分类/标签/嵌套评论、封面上传、Redis 缓存与完整测试体系。
 
 **仓库**：[github.com/mrha00/Blog](https://github.com/mrha00/Blog)
 
+## 仓库结构
+
+| 目录 | 说明 |
+|------|------|
+| `BlogApi.*` | 后端 REST API（四层架构） |
+| `blogweb/` | 前端 SPA（React + Vite） |
+| `Scripts/` | 数据库脚本与工具 |
+
 ## 项目亮点
 
-- **分层架构**：API → Services → Infrastructure → Core，Controller 仅依赖 Service
-- **完整业务闭环**：用户认证、文章 CRUD、分类/标签、嵌套评论、图片上传
-- **工程化细节**：统一异常处理、分页与组合筛选、浏览量 IP 防刷、详情缓存与失效
-- **可部署**：Docker Compose（API + Redis），SQLite 数据持久化
+- **全栈闭环**：注册/登录 → 写文章 → 发布 → 评论回复 → 管理分类标签
+- **分层后端**：API → Services → Infrastructure → Core
+- **工程化**：统一异常处理、CoverUrl 校验、删文级联评论、分页筛选
+- **测试**：Vitest 单元 + API 集成 + Playwright E2E（见 `blogweb/package.json`）
+- **可部署**：Docker Compose（API + Redis），SQLite 持久化
 
 ## 技术栈
 
-`ASP.NET Core 8` · `Entity Framework Core` · `SQLite` · `JWT Bearer` · `Redis` · `Swagger` · `Docker`
+**后端**：ASP.NET Core 8 · EF Core · SQLite · JWT · Redis · Swagger · Docker  
+**前端**：React 19 · TypeScript · Vite · Tailwind · React Router · Playwright
 
 ## 架构
 
 ```mermaid
-flowchart TB
-    Client[Client / Swagger]
-    API[BlogApi.API]
-    SVC[BlogApi.Services]
-    INF[BlogApi.Infrastructure]
-    CORE[BlogApi.Core]
+flowchart LR
+    Web[blogweb :3000]
+    API[BlogApi :6133]
     DB[(SQLite)]
-    Redis[(Redis Cache)]
+    Redis[(Redis)]
 
-    Client --> API
-    API --> SVC
-    SVC --> INF
-    INF --> CORE
-    INF --> DB
-    SVC --> Redis
+    Web -->|REST + JWT| API
+    API --> DB
+    API --> Redis
 ```
 
-## 快速开始
+## 快速开始（本地联调）
 
-**环境**：.NET 8 SDK
+**环境**：.NET 8 SDK、Node.js 18+
 
 ```bash
 git clone https://github.com/mrha00/Blog.git
 cd Blog
 
-# 1. 配置 JWT（复制示例并修改 Key，至少 32 字符）
+# 1. 后端
 copy BlogApi.API\appsettings.Development.example.json BlogApi.API\appsettings.Development.json
-
-# 2. 启动（自动执行数据库迁移）
 dotnet run --project BlogApi.API
 
-# 3. 可选：写入演示管理员
-dotnet run --project Scripts/DbExec -- BlogApi.API/blog.db Scripts/seed-test-data.sql
+# 2. 前端（新终端）
+cd blogweb
+npm install
+copy .env.example .env.local
+npm run dev
 ```
 
-打开 Swagger：**http://localhost:6133/swagger**
+| 服务 | 地址 |
+|------|------|
+| 前端 | http://localhost:3000 |
+| API / Swagger | http://localhost:6133/swagger |
+| 健康检查 | http://localhost:6133/health |
 
 | 演示账号 | 密码 | 角色 |
 |---------|------|------|
@@ -61,34 +70,44 @@ dotnet run --project Scripts/DbExec -- BlogApi.API/blog.db Scripts/seed-test-dat
 | alice | 123456 | User |
 | bob | 123456 | User |
 
-也可通过 `POST /api/auth/register` 注册普通用户。
+可选：写入演示数据
+
+```bash
+dotnet run --project Scripts/DbExec -- BlogApi.API/blog.db Scripts/seed-test-data.sql
+```
+
+## 测试
+
+```bash
+cd blogweb
+npm run test:all
+```
+
+（集成/E2E 需后端在 6133 端口运行。）
 
 ## API 概览
 
 | 模块 | 路径 | 说明 |
 |------|------|------|
 | 认证 | `/api/auth` | 注册、登录、当前用户 |
-| 文章 | `/api/posts` | CRUD、发布/草稿、分页与筛选 |
+| 文章 | `/api/posts` | CRUD、发布/草稿、我的草稿 `/mine` |
 | 分类 | `/api/categories` | 列表；管理需 Admin |
-| 标签 | `/api/tags` | 列表；管理需 Admin |
-| 评论 | `/api/posts/{id}/comments` | 发表、回复、嵌套查询 |
-| 上传 | `/api/upload` | 图片上传（jpg/png，≤5MB） |
+| 标签 | `/api/tags` | 列表/删除；创建需 Admin |
+| 评论 | `/api/posts/{id}/comments` | 发表、嵌套回复 |
+| 上传 | `/api/upload` | 封面（jpg/png，≤5MB，仅存 `/uploads/`） |
 
-在线文档：启动后访问 `/swagger`。
+**CORS**：`appsettings.Development.example.json` 已包含 `http://localhost:3000`。
 
-**健康检查**：`GET /health`（含数据库连通性）
-
-**CORS**：在 `appsettings.Development.json` 或环境变量 `Cors__AllowedOrigins__0` 配置前端地址，例如 `http://localhost:5173`。
-
-## Docker（可选）
+## Docker（仅 API，可选）
 
 ```bash
-copy .env.example .env   # 设置 JWT_KEY
+copy .env.example .env
 docker compose up --build
 ```
 
-- API / Swagger：<http://localhost:8080/swagger>
-- 数据文件：`./data/blog.db`
+## 详细文档
+
+- 前端：[`blogweb/README.md`](blogweb/README.md)
 
 ## License
 

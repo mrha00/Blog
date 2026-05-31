@@ -50,3 +50,15 @@ TestResults/
 Scripts/run-local-tests.ps1
 Scripts/run-phase6-tests.ps1
 Scripts/run-regression-24.ps1
+
+# Frontend (blogweb) — see blogweb/.gitignore
+blogweb/node_modules/
+blogweb/dist/
+blogweb/coverage/
+blogweb/test-results/
+blogweb/playwright-report/
+blogweb/blob-report/
+blogweb/.env
+blogweb/.env.local
+blogweb/.env.*.local
+!blogweb/.env.example

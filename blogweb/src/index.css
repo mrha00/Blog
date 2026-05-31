@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Base custom definitions */
+body {
+  font-family: var(--font-sans);
+  background-color: #f7f9fb;
+  color: #191c1e;
+}
+
+/* Material design style colors & utility classes */
+.bg-background { background-color: #f7f9fb; }
+.text-on-background { color: #191c1e; }
+.text-primary { color: #004ac6; }
+.bg-primary { background-color: #004ac6; }
+.border-outline-variant { border-color: #e0e3e5; }
+.bg-surface-container-lowest { background-color: #ffffff; }
+.bg-surface-container-low { background-color: #f2f4f6; }
+.bg-surface-container { background-color: #eceef0; }
+.bg-surface-bright { background-color: #f7f9fb; }
+.bg-surface-variant { background-color: #e0e3e5; }
+.text-on-surface-variant { color: #434655; }
+.text-secondary { color: #565e74; }
+.bg-secondary-container { background-color: #dae2fd; }
+.text-on-secondary-container { color: #5c647a; }
+.bg-primary-fixed { background-color: #dbe1ff; }
+
+/* Custom shadow level 2 */
+.shadow-level-2 {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+}
+
+/* Custom styles for article body markdown rendering */
+.markdown-content h1,
+.markdown-content h2 {
+  font-family: "Inter", sans-serif;
+  font-size: 1.5rem; /* 24px */
+  font-weight: 600;
+  line-height: 2rem;
+  color: #191c1e;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.markdown-content h1:first-child,
+.markdown-content h2:first-child {
+  margin-top: 0;
+}
+
+.markdown-content h3 {
+  font-family: "Inter", sans-serif;
+  font-size: 1.25rem; /* 20px */
+  font-weight: 600;
+  line-height: 1.75srem;
+  color: #191c1e;
+  margin-top: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.markdown-content p {
+  font-family: "Inter", sans-serif;
+  font-size: 1rem; /* 16px */
+  font-weight: 400;
+  line-height: 1.5rem; /* 24px */
+  color: #434655;
+  margin-bottom: 1rem;
+}
+
+.markdown-content pre {
+  background-color: #f8fafc;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+  overflow-x: auto;
+  margin-bottom: 1.5rem;
+}
+
+.markdown-content code {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.25rem;
+  color: #004ac6;
+}
+
+/* Technical Precision Custom Marker for Lists */
+.markdown-content ul {
+  list-style-type: none;
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.markdown-content li {
+  position: relative;
+  font-family: "Inter", sans-serif;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5rem;
+  color: #434655;
+  margin-bottom: 0.5rem;
+}
+
+.markdown-content li::before {
+  content: "";
+  position: absolute;
+  left: -1rem;
+  top: 0.6rem;
+  width: 6px;
+  height: 6px;
+  background-color: #004ac6;
+  border-radius: 1px;
+}

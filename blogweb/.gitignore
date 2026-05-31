@@ -1,0 +1,24 @@
+node_modules/
+dist/
+build/
+coverage/
+
+# Local env (never commit)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Test / Playwright artifacts
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Logs & OS
+*.log
+.DS_Store
+Thumbs.db
+
+# AI Studio scaffold (not used)
+assets/.aistudio/
