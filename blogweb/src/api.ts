@@ -189,12 +189,14 @@ export async function getMe(): Promise<{
 export async function updateProfile(payload: {
   nickname?: string;
   avatarUrl?: string;
+  bio?: string;
 }): Promise<{
   userId: number;
   username: string;
   nickname: string;
   role: string;
   avatarUrl?: string;
+  bio?: string;
   email?: string;
 }> {
   const res = await api.put('/api/auth/profile', payload);
