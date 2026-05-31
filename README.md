@@ -76,6 +76,10 @@ dotnet run --project Scripts/DbExec -- BlogApi.API/blog.db Scripts/seed-test-dat
 
 在线文档：启动后访问 `/swagger`。
 
+**健康检查**：`GET /health`（含数据库连通性）
+
+**CORS**：在 `appsettings.Development.json` 或环境变量 `Cors__AllowedOrigins__0` 配置前端地址，例如 `http://localhost:5173`。
+
 ## Docker（可选）
 
 ```bash
